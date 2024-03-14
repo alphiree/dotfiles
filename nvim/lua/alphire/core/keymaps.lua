@@ -39,10 +39,10 @@ keymap.set("n", "<leader>we", "<C-w>=", { desc = "Make splits equal size" }) -- 
 keymap.set("n", "<leader>wq", "<cmd>close<CR>", { desc = "Close current split" }) -- close current split window
 
 -- switching windows
--- keymap.set("n", "<C-{>", "<cmd>TmuxNavigateLeft<CR>", { desc = "Window switch to left" })
--- keymap.set("n", "<C-}>", "<cmd>TmuxNavigateRight<CR>", { desc = "Window switch to right" })
--- keymap.set("n", "<C-:>", "<cmd>TmuxNavigateUp<CR>", { desc = "Window switch to up" })
--- keymap.set("n", '<C-">', "<cmd>TmuxNavigateDown<CR>", { desc = "Window switch to down" })
+keymap.set("n", "<M-left>", "<cmd>TmuxNavigateLeft<CR>", { desc = "Window switch to left" })
+keymap.set("n", "<M-right>", "<cmd>TmuxNavigateRight<CR>", { desc = "Window switch to right" })
+keymap.set("n", "<M-up>", "<cmd>TmuxNavigateUp<CR>", { desc = "Window switch to up" })
+keymap.set("n", "<M-down>", "<cmd>TmuxNavigateDown<CR>", { desc = "Window switch to down" })
 
 -- tab management
 keymap.set("n", "<leader>tt", "<cmd>tabnew<CR>", { desc = "Open new tab" }) -- open new tab
@@ -62,12 +62,11 @@ keymap.set("n", "<leader>q", ":Bdelete<CR>", { desc = "Remove Current Buffer" })
 keymap.set("n", "<leader>l", "<cmd>Lazy<CR>", { desc = "Lazy Plugin Manager Popup" })
 
 -- Mason LSP Manager Popup
-keymap.set("n", "<leader>m", "<cmd>Mason<CR>", { desc = "Mason LSP Manager Popup" })
+keymap.set("n", "<leader>mm", "<cmd>Mason<CR>", { desc = "Mason LSP Manager Popup" })
 
 -- nvim tree (file explorer)
-keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle file explorer" })
-keymap.set("n", "<C-S-e>", "<cmd>NvimTreeFocus<CR>", { desc = "Focus to file explorer" })
-keymap.set("n", "<C-S-p>", "<cmd>nvim-tree: Open: Vertical Split<CR>", { desc = "Focus to file explorer" })
+keymap.set("n", "<leader>ee", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle file explorer" })
+keymap.set("n", "<leader>ef", "<cmd>NvimTreeFocus<CR>", { desc = "Focus to file explorer" })
 
 --   keymap.set("n", "<leader>er", "<cmd>NvimTreeRefresh<CR>", { desc = "Refresh file explorer" }) -- refresh file explorer
 
