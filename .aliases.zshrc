@@ -15,3 +15,6 @@ alias gitmain='git log origin main --oneline'
 alias zshrc='nvim ~/.zshrc'
 
 alias gs='git status'
+
+alias alp='tmux new-session -A -s alphire'
+
