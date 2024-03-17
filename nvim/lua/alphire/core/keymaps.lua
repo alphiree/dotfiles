@@ -86,3 +86,5 @@ keymap.set("n", "<leader>fc", "<cmd>Telescope grep_string<cr>", { desc = "Find s
 keymap.set("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<cr>", {})
 -- Gitblame
 keymap.set("n", "<leader>gb", "<cmd>Git blame<cr>", {})
+-- Lazygit integration
+keymap.set("n", "<leader>gg", "<cmd>LazyGit<cr>", {})
