@@ -75,7 +75,7 @@ keymap.set("n", "<leader>wm", "<cmd>MaximizerToggle<CR>", { desc = "Maximize the
 
 -- Telescope
 keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>", {})
-keymap.set("n", "<leader>fg", "<cmd>Telescope live_grep<cr>", {})
+keymap.set("n", "<leader>fg", "<cmd>Telescope git_status<cr>", {})
 keymap.set("n", "<leader>fb", "<cmd>Telescope buffers<cr>", {})
 keymap.set("n", "<leader>fh", "<cmd>Telescope help_tags<cr>", {})
 keymap.set("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Fuzzy find recent files" })
