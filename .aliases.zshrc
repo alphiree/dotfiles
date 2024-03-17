@@ -18,3 +18,4 @@ alias gs='git status'
 
 alias alp='tmux new-session -A -s alphire'
 
+alias lg='lazygit'
