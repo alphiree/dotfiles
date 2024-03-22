@@ -93,4 +93,4 @@ keymap.set("n", "<leader>gb", "<cmd>Git blame<cr>", {})
 keymap.set("n", "<leader>gg", "<cmd>LazyGit<cr>", {})
 
 -- ToggleTerm
-keymap.set("n", "<C-Bslash>", "<cmd>ToggleTerm<cr>", {})
+keymap.set("n", "<C-\\>", "<cmd>ToggleTerm<cr>", {})
