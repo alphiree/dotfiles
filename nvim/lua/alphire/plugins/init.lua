@@ -5,4 +5,6 @@ return {
 	"nvim-lua/plenary.nvim",
 	-- To fix the delete buffer issue redirecting to nvimtree
 	"famiu/bufdelete.nvim",
+	-- Github CoPilot
+	"github/copilot.vim",
 }
