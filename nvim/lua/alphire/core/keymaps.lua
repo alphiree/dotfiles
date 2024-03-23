@@ -30,6 +30,17 @@ keymap.set("n", "<leader>j", "zR", {})
 -- delete single character without copying into register
 keymap.set("n", "x", '"_x')
 
+-- creates a new file inside the directory of the buffer you are in
+function OpenNewFile(filename)
+	vim.cmd("edit %:h/" .. filename)
+end
+vim.api.nvim_set_keymap(
+	"n",
+	"<Leader>nf",
+	':lua OpenNewFile(vim.fn.input("Enter filename: "))<CR>',
+	{ noremap = true, silent = true }
+)
+
 -- scroll down with cursor on same line mapping (Does not work inside tmux)
 -- -- Scroll Down
 -- keymap.set("n", "<A-down>", "<C-e>")
