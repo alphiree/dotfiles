@@ -91,6 +91,3 @@ keymap.set("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<cr>", {})
 keymap.set("n", "<leader>gb", "<cmd>Git blame<cr>", {})
 -- Lazygit integration
 keymap.set("n", "<leader>gg", "<cmd>LazyGit<cr>", {})
-
--- ToggleTerm
-keymap.set("n", "<C-\\>", "<cmd>ToggleTerm<cr>", {})
