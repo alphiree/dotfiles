@@ -17,6 +17,10 @@ opt.wrap = false -- disable line wrapping
 -- color column on max line
 -- opt.colorcolumn = "80"
 
+-- folding code
+opt.foldmethod = "indent"
+opt.foldlevel = 20 -- set this level to have code not folded automatically
+
 -- search settings
 opt.ignorecase = true -- ignore case when searching
 opt.smartcase = true -- if you include mixed case in your search, assumes you want case-sensitive

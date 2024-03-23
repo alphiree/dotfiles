@@ -22,14 +22,19 @@ keymap.set("v", "<C-S>", "<C-C>:update<CR>", { silent = true })
 -- Insert mode mapping
 keymap.set("i", "<C-S>", "<C-O>:update<CR><C-\\><C-n>", { silent = true })
 
+-- fold all inside the current file
+keymap.set("n", "<leader>k", "zM", {})
+-- unfold all inside the current file
+keymap.set("n", "<leader>j", "zR", {})
+
 -- delete single character without copying into register
 keymap.set("n", "x", '"_x')
 
--- scroll down with cursor on same line mapping
--- Scroll Down
-keymap.set("n", "<A-down>", "<C-e>")
--- Scroll Up
-keymap.set("n", "<A-up>", "<C-y>")
+-- scroll down with cursor on same line mapping (Does not work inside tmux)
+-- -- Scroll Down
+-- keymap.set("n", "<A-down>", "<C-e>")
+-- -- Scroll Up
+-- keymap.set("n", "<A-up>", "<C-y>")
 
 -- increment/decrement numbers
 keymap.set("n", "<leader>+", "<C-a>", { desc = "Increment number" }) -- increment
