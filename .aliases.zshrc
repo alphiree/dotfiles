@@ -19,3 +19,6 @@ alias gs='git status'
 alias alp='tmux new-session -A -s alphire'
 
 alias lg='lazygit'
+
+alias gitpurge="git branch --merged | grep -Ev '(^\\*|master|main|dev)' | xargs git branch -d && echo 'Merged Branches cleaned ✨'"
+
