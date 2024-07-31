@@ -78,7 +78,7 @@ keymap.set("n", "<leader>q", ":Bdelete<CR>", { desc = "Remove Current Buffer" })
 -- PLUGINS
 
 -- Lazy Plugin Popup
-keymap.set("n", "<leader>l", "<cmd>Lazy<CR>", { desc = "Lazy Plugin Manager Popup" })
+keymap.set("n", "<leader>ll", "<cmd>Lazy<CR>", { desc = "Lazy Plugin Manager Popup" })
 
 -- Mason LSP Manager Popup
 keymap.set("n", "<leader>mm", "<cmd>Mason<CR>", { desc = "Mason LSP Manager Popup" })
