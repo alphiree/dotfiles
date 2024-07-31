@@ -7,6 +7,7 @@ return {
 			name = { "venv", ".venv" },
 			-- auto_refresh = true,
 			path = 0,
+			stay_on_this_version = true,
 		})
 	end,
 	event = "VeryLazy", -- Optional: needed only if you want to type `:VenvSelect` without a keymapping
