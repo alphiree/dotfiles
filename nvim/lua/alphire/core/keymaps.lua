@@ -40,8 +40,8 @@ keymap.set("x", "<leader>p", '"_dP')
 -- copy to system clipboard
 keymap.set("v", "<leader>y", '"+y')
 
--- navigate between projects using tmux
-keymap.set("n", "<c-f>", "<cmd>silent !tmux neww tmux-sessionizer<CR>", { desc = "Open tmux sessionizer" })
+-- use ctrl+f as find when in current file
+keymap.set("n", "<c-f>", "/", { desc = "Open tmux sessionizer" })
 
 -- replace all instances of a word im in, in the current file
 keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
