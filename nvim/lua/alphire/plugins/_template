@@ -1,0 +1,14 @@
+-- return {
+-- 	"author/plugin_name.nvim",
+-- 	version = "*",
+-- 	lazy = true,
+-- 	-- event = { "BufReadPre", "BufNewFile" }, -- to disable, comment this out
+-- 	tag = "0.1.5",
+-- 	-- or, branch = '0.1.x',
+-- 	dependencies = { "author/plugin_name.nvim" },
+-- 	config = function()
+-- 		require("plugin_name").setup({
+-- 			parameters = {},
+-- 		})
+-- 	end,
+-- }
