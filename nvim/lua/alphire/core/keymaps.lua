@@ -57,6 +57,16 @@ keymap.set("n", "<C-u>", "<C-u>zz")
 keymap.set("n", "n", "nzzzv")
 keymap.set("n", "N", "Nzzzv")
 
+-- Refreshes the current buffer
+keymap.set("n", "<leader>br", function()
+	-- Reloads the file to reflect the changes
+	vim.cmd("edit!")
+	print("Buffer reloaded")
+end, { desc = "[P]Reload current buffer" })
+
+-- To stop the LSP server
+keymap.set("n", "<leader>S", "<cmd>LspStop<CR>", { desc = "LspStop" })
+
 -- creates a new file inside the directory of the buffer you are in
 function OpenNewFile(filename)
 	vim.cmd("edit %:h/" .. filename)
