@@ -30,6 +30,19 @@ keymap.set("n", "<leader>j", "zR", {})
 -- delete single character without copying into register
 keymap.set("n", "x", '"_x')
 
+-- move lines up and down
+keymap.set("v", "J", ":m '>+1<CR>gv=gv", { desc = "Move line down" })
+keymap.set("v", "K", ":m '>-2<CR>gv=gv", { desc = "Move line up" })
+
+-- paste without replacing the current selection
+keymap.set("x", "<leader>p", '"_dP')
+
+-- copy to system clipboard
+keymap.set("v", "<leader>y", '"+y')
+
+-- navigate between projects
+keymap.set("n", "<c-f>", "<cmd>silent !tmux neww tmux-sessionizer<CR>", { desc = "Open tmux sessionizer" })
+
 -- creates a new file inside the directory of the buffer you are in
 function OpenNewFile(filename)
 	vim.cmd("edit %:h/" .. filename)
