@@ -49,6 +49,14 @@ keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left
 -- use control + c instead for escape
 keymap.set("i", "<C-c>", "<ESC>", { desc = "Exit insert mode with ctrl+c" })
 
+-- keep cursor in the middle of the screen when scrolling
+keymap.set("n", "<C-d>", "<C-d>zz")
+keymap.set("n", "<C-u>", "<C-u>zz")
+
+-- keeps the searched text in the middle of the screen
+keymap.set("n", "n", "nzzzv")
+keymap.set("n", "N", "Nzzzv")
+
 -- creates a new file inside the directory of the buffer you are in
 function OpenNewFile(filename)
 	vim.cmd("edit %:h/" .. filename)
