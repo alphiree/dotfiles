@@ -34,6 +34,7 @@ return {
 				async = false,
 				timeout_ms = 500,
 			})
+			print("Applied formatting!")
 		end, { desc = "Format file or range (in visual mode)" })
 	end,
 }
