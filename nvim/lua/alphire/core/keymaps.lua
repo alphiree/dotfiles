@@ -48,6 +48,7 @@ keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left
 
 -- use control + c instead for escape
 keymap.set("i", "<C-c>", "<ESC>", { desc = "Exit insert mode with ctrl+c" })
+keymap.set("n", "<C-c>", "<ESC>", { desc = "Exit insert mode with ctrl+c" })
 
 -- keep cursor in the middle of the screen when scrolling
 keymap.set("n", "<C-d>", "<C-d>zz")
@@ -67,11 +68,10 @@ end, { desc = "[P]Reload current buffer" })
 -- To stop the LSP server
 keymap.set("n", "<leader>S", "<cmd>LspStop<CR>", { desc = "LspStop" })
 
-
 -- get the current path of the buffer i'm currently in and add it to clipboard
 keymap.set("n", "<leader>cp", function()
-    vim.fn.setreg("+", vim.fn.expand("%:p"))
-    print("Path copied to clipboard")
+	vim.fn.setreg("+", vim.fn.expand("%:p"))
+	print("Path copied to clipboard")
 end, { desc = "Copy current path to clipboard" })
 
 -- creates a new file inside the directory of the buffer you are in
