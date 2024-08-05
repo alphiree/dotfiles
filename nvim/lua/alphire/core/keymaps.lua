@@ -67,6 +67,13 @@ end, { desc = "[P]Reload current buffer" })
 -- To stop the LSP server
 keymap.set("n", "<leader>S", "<cmd>LspStop<CR>", { desc = "LspStop" })
 
+
+-- get the current path of the buffer i'm currently in and add it to clipboard
+keymap.set("n", "<leader>cp", function()
+    vim.fn.setreg("+", vim.fn.expand("%:p"))
+    print("Path copied to clipboard")
+end, { desc = "Copy current path to clipboard" })
+
 -- creates a new file inside the directory of the buffer you are in
 function OpenNewFile(filename)
 	vim.cmd("edit %:h/" .. filename)
