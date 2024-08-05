@@ -48,7 +48,8 @@ keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left
 
 -- use control + c instead for escape
 keymap.set("i", "<C-c>", "<ESC>", { desc = "Exit insert mode with ctrl+c" })
-keymap.set("n", "<C-c>", "<ESC>", { desc = "Exit insert mode with ctrl+c" })
+-- not working
+-- keymap.set("n", "<C-c>", "<ESC>", { desc = "Exit insert mode with ctrl+c" })
 
 -- keep cursor in the middle of the screen when scrolling
 keymap.set("n", "<C-d>", "<C-d>zz")
