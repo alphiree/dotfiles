@@ -1,6 +1,6 @@
 return {
 	"akinsho/toggleterm.nvim",
-	tag = "*",
+	-- tag = "*",
 	config = function()
 		local toggleterm = require("toggleterm")
 		toggleterm.setup({
