@@ -1,5 +1,11 @@
-filezilla/*
-iterm2/*
+## ignore all the folders except the following:
+*/ 
+!nvim/
+!tmux/
+!kitty/
+
+## Ignore specific files
 *.DS_Store
+
+## Ignore specific folders
 tmux/plugins/
-github-copilot/
