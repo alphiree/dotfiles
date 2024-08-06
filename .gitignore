@@ -4,6 +4,10 @@
 # !tmux/
 # !kitty/
 
+filezilla/
+github-copilot/
+iterm2/
+
 ## Ignore specific files
 *.DS_Store
 
