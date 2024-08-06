@@ -1,8 +1,8 @@
 ## ignore all the folders except the following:
-*/ 
-!nvim/
-!tmux/
-!kitty/
+# */ 
+# !nvim/
+# !tmux/
+# !kitty/
 
 ## Ignore specific files
 *.DS_Store
