@@ -9,3 +9,4 @@
 
 ## Ignore specific folders
 tmux/plugins/
+tmux/tpm_plugin/
