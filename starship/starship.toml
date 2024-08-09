@@ -1,13 +1,13 @@
 ## Contains the configuration for Starship prompt
 
-# First param ─┌
+# # First param ─┌
 # [username]
 # format = " [$user]($style) in "
 # style_user = "#a9dc76"
 # style_root = "#a9dc76"
 # show_always = true
-
-# Second param
+#
+# # Second param
 # [hostname]
 # format = "[$hostname]($style) in "
 # style = "bold dimmed red"
@@ -57,6 +57,18 @@ style = 'bold #a9dc76'
 # pyenv_version_name = true
 # pyenv_prefix = "pyenv "
 
+# Last param in the first line/row
+# [cmd_duration]
+# min_time = 1
+# format = "took [$duration]($style)"
+# disabled = false
+
+[docker_context]
+format = 'via [🐋 $context](blue bold)'
+
+[lua]
+format = 'via [ $version]($style)'
+style = 'bold #a9dc76'
 
 
 # Disable the package module, hiding it from the prompt completely
