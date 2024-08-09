@@ -1,12 +1,48 @@
 ## Contains the configuration for Starship prompt
 
+# First param ─┌
+# [username]
+# format = " [$user]($style) in "
+# style_user = "#a9dc76"
+# style_root = "#a9dc76"
+# show_always = true
+
+# Second param
+# [hostname]
+# format = "[$hostname]($style) in "
+# style = "bold dimmed red"
+# trim_at = "-"
+# ssh_only = false
+# disabled = false
+
 # Inserts a blank line between shell prompts
 add_newline = true
 
 # Replace the '❯' symbol in the prompt with '➜'
-[character] # The name of the module we are configuring is 'character'
-success_symbol = '[➜](bold green)' # The 'success_symbol' segment is being set to '➜' with the color 'bold green'
-error_symbol = '[➜](bold red)' # The 'error_symbol' segment is being set to '➜' with the color 'bold red'
+[character] # the name of the module we are configuring is 'character'
+success_symbol = '[➜](bold #fed65e)' # the 'success_symbol' segment is being set to '➜' with the color 'bold green'
+error_symbol = '[➜](bold #ff5555)' # The 'error_symbol' segment is being set to '➜' with the color 'bold red'
+
+
+[directory]
+read_only = "🔒"
+# truncation_length = 3 
+# truncation_symbol = "…"
+truncate_to_repo = true
+style = "bold #a9dc76"
+# style = "bold white"
+
+[git_branch]
+always_show_remote = true
+symbol = ' '
+truncation_length = 4
+truncation_symbol = ''
+style = 'bold #a9dc76'
+# ignore_branches = ['master', 'main']
+
+
+[git_status]
+style = "bold #ff5555"
 
 # Disable the package module, hiding it from the prompt completely
 [package]
@@ -22,9 +58,6 @@ ap-southeast-2 = 'au'
 us-east-1 = 'va'
 [aws.profile_aliases]
 CompanyGroupFrobozzOnCallAccess = 'Frobozz'
-
-
-
 
 
 
