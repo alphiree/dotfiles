@@ -20,7 +20,7 @@ add_newline = true
 
 # Replace the '❯' symbol in the prompt with '➜'
 [character] # the name of the module we are configuring is 'character'
-success_symbol = '[➜](bold #fed65e)' # the 'success_symbol' segment is being set to '➜' with the color 'bold green'
+success_symbol = '[➜](bold #a9dc76)' # the 'success_symbol' segment is being set to '➜' with the color 'bold green'
 error_symbol = '[➜](bold #ff5555)' # The 'error_symbol' segment is being set to '➜' with the color 'bold red'
 
 
@@ -29,11 +29,11 @@ read_only = "🔒"
 # truncation_length = 3 
 # truncation_symbol = "…"
 truncate_to_repo = true
-style = "bold #a9dc76"
+style = "bold #9d7acf"
 # style = "bold white"
 
 [git_branch]
-always_show_remote = true
+always_show_remote = false
 symbol = ' '
 truncation_length = 4
 truncation_symbol = ''
