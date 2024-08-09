@@ -35,7 +35,8 @@ keymap.set("v", "J", ":m '>+1<CR>gv=gv", { desc = "Move line down" })
 keymap.set("v", "K", ":m '>-2<CR>gv=gv", { desc = "Move line up" })
 
 -- paste without replacing the current selection
-keymap.set("x", "<leader>p", '"_dP')
+-- keymap.set("x", "<leader>p", '"_dP')
+keymap.set("x", "p", '"_dP')
 
 -- copy to system clipboard
 keymap.set("v", "<leader>y", '"+y')
