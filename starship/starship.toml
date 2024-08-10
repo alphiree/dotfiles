@@ -64,7 +64,7 @@ style = 'bold #a9dc76'
 # disabled = false
 
 [docker_context]
-format = 'via [🐋 $context](blue bold)'
+format = 'via [🐋 $context](blue bold) '
 
 [lua]
 format = 'via [ $version]($style)'
