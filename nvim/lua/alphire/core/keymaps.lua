@@ -139,7 +139,7 @@ keymap.set("n", "<leader>ef", "<cmd>NvimTreeFocus<CR>", { desc = "Focus to file 
 keymap.set("n", "<leader>wm", "<cmd>MaximizerToggle<CR>", { desc = "Maximize the Window" })
 
 -- Telescope
-keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>", {})
+keymap.set("n", "<leader>ff", "<cmd>Telescope find_files theme=dropdown<cr>", {})
 keymap.set("n", "<leader>fg", "<cmd>Telescope git_status<cr>", {})
 keymap.set("n", "<leader>fb", "<cmd>Telescope buffers<cr>", {})
 keymap.set("n", "<leader>fh", "<cmd>Telescope help_tags<cr>", {})
@@ -149,6 +149,8 @@ keymap.set("n", "<leader>fc", "<cmd>Telescope grep_string<cr>", { desc = "Find s
 
 -- Gitsigns
 keymap.set("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<cr>", {})
+-- Gitsigns: reset hunk
+keymap.set("n", "<leader>gr", "<cmd>Gitsigns reset_hunk<cr>", {})
 -- Gitblame
 keymap.set("n", "<leader>gb", "<cmd>Git blame<cr>", {})
 -- Lazygit integration
