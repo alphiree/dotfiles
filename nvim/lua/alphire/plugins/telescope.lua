@@ -16,6 +16,10 @@ return {
 						["<C-h>"] = "which_key",
 					},
 				},
+				file_ignore_patterns = {
+					".git/.*",
+					".cache",
+				},
 			},
 			pickers = {
 				find_files = {
