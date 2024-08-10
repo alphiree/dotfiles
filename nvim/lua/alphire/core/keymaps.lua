@@ -6,7 +6,7 @@ local keymap = vim.keymap -- for conciseness
 -- General Keymaps -------------------
 
 -- use jk instead of ESC to exit insert mode
-keymap.set("i", "jk", "<ESC>", { desc = "Exit insert mode with jk" })
+-- keymap.set("i", "jk", "<ESC>", { desc = "Exit insert mode with jk" })
 
 -- map q! exit to ctrl+q
 keymap.set("n", "<C-q>", "<cmd>q<CR>", { desc = "Exit nvim" })
