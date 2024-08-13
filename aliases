@@ -23,3 +23,5 @@ alias lg='lazygit'
 alias gitpurge="git branch --merged | grep -Ev '(^\\*|master|main|dev)' | xargs git branch -d && echo 'Merged Branches cleaned ✨'"
 
 alias rfb='source ~/.bashrc'
+
+alias viv='flatpak run com.vivaldi.Vivaldi &'
