@@ -26,7 +26,7 @@ alias rfb='source ~/.bashrc'
 
 alias viv='flatpak run com.vivaldi.Vivaldi &'
 
-alias opd = 'xdg-open .'
+alias opd='xdg-open .'
 
 
 
