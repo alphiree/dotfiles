@@ -24,9 +24,9 @@ alias gitpurge="git branch --merged | grep -Ev '(^\\*|master|main|dev)' | xargs 
 
 alias rfb='source ~/.bashrc'
 
-alias viv='flatpak run com.vivaldi.Vivaldi &'
+alias viv='exec /usr/bin/flatpak run --branch=stable --arch=x86_64 com.vivaldi.Vivaldi &'
 
 alias opd='xdg-open .'
 
-
+alias obs='exec /usr/bin/flatpak run --branch=stable --arch=x86_64 md.obsidian.Obsidian &'
 
