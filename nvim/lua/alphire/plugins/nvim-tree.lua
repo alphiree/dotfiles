@@ -11,7 +11,7 @@ return {
 		-- optionally enable 24-bit colour
 		vim.opt.termguicolors = true
 
-		-- change color for arrows in tree to light blue
+		-- change color for arrows in tree
 		vim.cmd([[ highlight NvimTreeFolderArrowClosed guifg=#fed65e ]])
 		vim.cmd([[ highlight NvimTreeFolderArrowOpen guifg=#fed65e ]])
 
