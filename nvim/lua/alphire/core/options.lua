@@ -48,7 +48,7 @@ opt.splitbelow = true -- split horizontal window to the bottom
 
 opt.iskeyword:append("-") -- consider string-string as whole word
 
-opt.conceallevel = 1
+opt.conceallevel = 2
 
 -- remove comment continuation in next line
 vim.api.nvim_create_autocmd("BufEnter", {
