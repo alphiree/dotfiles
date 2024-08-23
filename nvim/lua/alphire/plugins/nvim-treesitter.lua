@@ -18,6 +18,7 @@ return {
 				highlight = {
 					enable = true,
 				},
+
 				-- enable indentation
 				indent = { enable = true },
 				-- enable autotagging (w/ nvim-ts-autotag plugin)
@@ -52,6 +53,9 @@ return {
 					},
 				},
 			})
+			-- vim.api.nvim_set_hl(0, "@markup.raw", { link = "Identifier" })
+			-- vim.api.nvim_set_hl(0, "@markup.raw", { fg = "#ffffff", bg = "#282c34", italic = true })
+			-- vim.api.nvim_set_hl(0, "@markup.raw.block", { fg = "#ffffff", bg = "#282c34", italic = true })
 		end,
 	},
 }
