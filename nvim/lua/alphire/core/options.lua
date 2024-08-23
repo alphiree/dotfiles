@@ -47,3 +47,12 @@ opt.splitbelow = true -- split horizontal window to the bottom
 -- vim.cmd('hi VertSplit guifg=#ff0000')
 
 opt.iskeyword:append("-") -- consider string-string as whole word
+
+-- remove comment continuation in next line
+vim.api.nvim_create_autocmd("BufEnter", {
+	callback = function()
+		vim.opt.formatoptions:remove({ "c", "r", "o" })
+	end,
+	group = vim.api.nvim_create_augroup("General", { clear = true }),
+	desc = "Disable New Line Comment",
+})
