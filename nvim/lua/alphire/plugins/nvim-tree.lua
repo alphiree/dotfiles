@@ -47,7 +47,8 @@ return {
 				},
 			},
 			filters = {
-				custom = { ".DS_Store" },
+				dotfiles = true,
+				custom = { ".DS_Store", "node_modules/.*" },
 			},
 			git = {
 				ignore = false,
@@ -57,5 +58,8 @@ return {
 				update_root = false,
 			},
 		})
+		if vim.fn.argc() == 0 then
+			vim.cmd("NvimTreeOpen")
+		end
 	end,
 }
