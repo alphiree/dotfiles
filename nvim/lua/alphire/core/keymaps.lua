@@ -8,8 +8,8 @@ local keymap = vim.keymap -- for conciseness
 -- use jk instead of ESC to exit insert mode
 -- keymap.set("i", "jk", "<ESC>", { desc = "Exit insert mode with jk" })
 
--- map q! exit to ctrl+q
-keymap.set("n", "<C-q>", "<cmd>q<CR>", { desc = "Exit nvim" })
+-- map q exit to ctrl+q
+keymap.set("n", "<leader>q", "<cmd>q<CR>", { desc = "Exit nvim" })
 
 -- clear search highlights
 keymap.set("n", "<leader>nh", ":nohl<CR>", { desc = "Clear search highlights" })
@@ -119,7 +119,7 @@ keymap.set("n", "<C-l>", "<cmd>TmuxNavigateDown<CR>", { desc = "Window switch to
 -- buffer management
 keymap.set("n", "<Tab>", ":BufferLineCycleNext<CR>", { desc = "Go to next buffer" })
 keymap.set("n", "<S-Tab>", ":BufferLineCyclePrev<CR>", { desc = "Go to previous buffer" })
-keymap.set("n", "<leader>q", ":Bdelete<CR>", { desc = "Remove Current Buffer" })
+keymap.set("n", "<leader>x", ":Bdelete<CR>", { desc = "Remove Current Buffer" })
 
 -- PLUGINS
 
