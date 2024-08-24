@@ -5,8 +5,6 @@ require("alphire.core.options")
 -- intiializing lazy plugin manager
 require("alphire.lazy")
 
--- Disabling the new comment line when creating file
-
 -- Initializing the venv from pyproject.toml in your workspace
 vim.api.nvim_create_autocmd("VimEnter", {
 	desc = "Auto select virtualenv Nvim open",
