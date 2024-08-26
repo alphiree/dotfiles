@@ -104,10 +104,10 @@ keymap.set("n", "<leader>we", "<C-w>=", { desc = "Make splits equal size" }) -- 
 keymap.set("n", "<leader>wq", "<cmd>close<CR>", { desc = "Close current split" }) -- close current split window
 
 -- switching windows
-keymap.set("n", "<C-h>", "<cmd>TmuxNavigateLeft<CR>", { desc = "Window switch to left" })
-keymap.set("n", "<C-j>", "<cmd>TmuxNavigateRight<CR>", { desc = "Window switch to right" })
+keymap.set("n", "<C-l>", "<cmd>TmuxNavigateLeft<CR>", { desc = "Window switch to left" })
+keymap.set("n", "<C-h>", "<cmd>TmuxNavigateRight<CR>", { desc = "Window switch to right" })
 keymap.set("n", "<C-k>", "<cmd>TmuxNavigateUp<CR>", { desc = "Window switch to up" })
-keymap.set("n", "<C-l>", "<cmd>TmuxNavigateDown<CR>", { desc = "Window switch to down" })
+keymap.set("n", "<C-j>", "<cmd>TmuxNavigateDown<CR>", { desc = "Window switch to down" })
 
 -- tab management
 -- keymap.set("n", "<leader>tt", "<cmd>tabnew<CR>", { desc = "Open new tab" }) -- open new tab
