@@ -46,6 +46,7 @@ return {
 				"pylint", -- python linter
 				"eslint_d", -- js linter
 				"marksman", -- markdown linter
+				"sqlfluff", -- sql linter
 			},
 		})
 	end,
