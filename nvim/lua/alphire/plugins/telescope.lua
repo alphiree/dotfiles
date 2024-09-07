@@ -28,6 +28,8 @@ return {
 						"--type",
 						"f",
 						"--color=never",
+						-- including the files included in .gitignore. ex: I want to see .env file
+						"--no-ignore-vcs",
 						"--hidden",
 						"--follow",
 					},
