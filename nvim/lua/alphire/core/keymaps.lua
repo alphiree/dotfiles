@@ -13,6 +13,8 @@ keymap.set("n", "<leader>q", "<cmd>q<CR>", { desc = "Exit nvim" })
 
 -- clear search highlights
 keymap.set("n", "<leader>nh", ":nohl<CR>", { desc = "Clear search highlights" })
+--  See `:help hlsearch`
+keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 
 -- setting Ctrl+S to save file
 -- Normal mode mapping
@@ -40,6 +42,11 @@ keymap.set("x", "p", '"_dP')
 
 -- copy to system clipboard
 keymap.set("v", "<leader>y", '"+y')
+
+-- when deleting it won't copy to clipboard
+keymap.set("n", "d", '"_d')
+keymap.set("n", "dd", '"_dd')
+keymap.set("n", "diw", '"_diw')
 
 -- use ctrl+f as find when in current file
 keymap.set("n", "<c-f>", "/", { desc = "Open tmux sessionizer" })
