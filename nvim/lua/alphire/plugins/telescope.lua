@@ -19,6 +19,8 @@ return {
 				file_ignore_patterns = {
 					".git/.*",
 					".cache",
+					".venv/.*",
+					"venv/.*",
 				},
 			},
 			pickers = {
