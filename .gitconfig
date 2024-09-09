@@ -1,0 +1,22 @@
+[user]
+	name = ryanlupague
+	email = ryan.lupague@indebted.co
+[core]
+    editor = nvim   
+    pager = delta
+
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    navigate = true
+    light = false
+    ; side-by-side = true
+    
+
+[merge]
+    conflictstyle = diff3
+
+[diff]
+    colorMoved = default
+
