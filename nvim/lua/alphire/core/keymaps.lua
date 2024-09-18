@@ -161,6 +161,6 @@ keymap.set("n", "<leader>gr", "<cmd>Gitsigns reset_hunk<cr>", {})
 -- Gitblame
 keymap.set("n", "<leader>gb", "<cmd>Git blame<cr>", {})
 -- Gitdiff with current file
-keymap.set("n", "<leader>Gdiffsplit", "<cmd>Git diff %<cr>", {})
+keymap.set("n", "<leader>gd", "<cmd>Gdiffsplit<cr>", {})
 -- Lazygit integration
 keymap.set("n", "<leader>gg", "<cmd>LazyGit<cr>", {})
