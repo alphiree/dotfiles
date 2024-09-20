@@ -54,11 +54,6 @@ keymap.set("n", "<c-f>", "/", { desc = "Open tmux sessionizer" })
 -- replace all instances of a word im in, in the current file
 keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
--- use control + c instead for escape
-keymap.set("i", "<C-c>", "<ESC>", { desc = "Exit insert mode with ctrl+c" })
--- not working
--- keymap.set("n", "<C-c>", "<ESC>", { desc = "Exit insert mode with ctrl+c" })
-
 -- keep cursor in the middle of the screen when scrolling
 keymap.set("n", "<C-d>", "<C-d>zz")
 keymap.set("n", "<C-u>", "<C-u>zz")
@@ -94,12 +89,6 @@ vim.api.nvim_set_keymap(
 	{ noremap = true, silent = true }
 )
 
--- scroll down with cursor on same line mapping (Does not work inside tmux)
--- -- Scroll Down
--- keymap.set("n", "<A-down>", "<C-e>")
--- -- Scroll Up
--- keymap.set("n", "<A-up>", "<C-y>")
-
 -- increment/decrement numbers
 keymap.set("n", "<leader>+", "<C-a>", { desc = "Increment number" }) -- increment
 keymap.set("n", "<leader>-", "<C-x>", { desc = "Decrement number" }) -- decrement
@@ -107,9 +96,11 @@ keymap.set("n", "<leader>-", "<C-x>", { desc = "Decrement number" }) -- decremen
 -- window management
 keymap.set("n", "<leader>ww", "<C-w>v", { desc = "Split window vertically" }) -- split window horizontally
 keymap.set("n", "<leader>ws", "<C-w>s", { desc = "Split window horizontally" }) -- split window vertically
+-- keymap.set("n", "<leader>wh", "<C-w>>", { desc = "Resize Window to the Left" })
+-- keymap.set("n", "<leader>wh", "<C-w><", { desc = "Resize Window to the Left" })
 keymap.set("n", "<leader>we", "<C-w>=", { desc = "Make splits equal size" }) -- make split windows equal width & height
 keymap.set("n", "<leader>wq", "<cmd>close<CR>", { desc = "Close current split" }) -- close current split window
-
+keymap.set("n", "<leader>wm", "<cmd>MaximizerToggle<CR>", { desc = "Maximize the Window" })
 -- switching windows
 keymap.set("n", "<C-l>", "<cmd>TmuxNavigateLeft<CR>", { desc = "Window switch to left" })
 keymap.set("n", "<C-h>", "<cmd>TmuxNavigateRight<CR>", { desc = "Window switch to right" })
@@ -141,9 +132,6 @@ keymap.set("n", "<leader>ee", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle file e
 keymap.set("n", "<leader>ef", "<cmd>NvimTreeFocus<CR>", { desc = "Focus to file explorer" })
 
 --   keymap.set("n", "<leader>er", "<cmd>NvimTreeRefresh<CR>", { desc = "Refresh file explorer" }) -- refresh file explorer
-
--- window maximizer
-keymap.set("n", "<leader>wm", "<cmd>MaximizerToggle<CR>", { desc = "Maximize the Window" })
 
 -- Telescope
 keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>", {})
