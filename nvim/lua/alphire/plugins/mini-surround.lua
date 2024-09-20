@@ -1,7 +1,7 @@
 return {
+	-- Adds surrounding characters in texts. (Examples are `()`, `[]`, `{}`, `""`, `''`, etc.)
 	"echasnovski/mini.surround",
 	version = "*",
-	dependencies = { "echasnovski/mini.surround" },
 	config = function()
 		require("mini.surround").setup({
 			mappings = {
