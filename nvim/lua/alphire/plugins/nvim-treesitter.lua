@@ -33,6 +33,7 @@ return {
 					"yaml",
 					"html",
 					"css",
+					"go",
 					"markdown",
 					"markdown_inline",
 					"bash",
