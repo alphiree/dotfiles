@@ -146,6 +146,11 @@ keymap.set("n", "<leader>fc", "<cmd>Telescope grep_string<cr>", { desc = "Find s
 keymap.set("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<cr>", {})
 -- Gitsigns: reset hunk
 keymap.set("n", "<leader>gr", "<cmd>Gitsigns reset_hunk<cr>", {})
+-- Gitsigns: Stage/Add hunk
+keymap.set("n", "<leader>ga", "<cmd>Gitsigns stage_hunk<cr>", {})
+-- Gitsigns: previous/next hunk
+keymap.set("n", "<leader>gn", "<cmd>Gitsigns next_hunk<cr>", {})
+keymap.set("n", "<leader>gN", "<cmd>Gitsigns prev_hunk<cr>", {})
 -- Gitblame
 keymap.set("n", "<leader>gb", "<cmd>Git blame<cr>", {})
 -- Gitdiff with current file
