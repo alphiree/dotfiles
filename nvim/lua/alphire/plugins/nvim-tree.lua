@@ -17,6 +17,17 @@ return {
 
 		-- configure nvim-tree
 		nvimtree.setup({
+			--  Remove the mapping of 'f' for filtering, I don't even use this and it's annoying.
+			on_attach = function(bufnr)
+				local api = require("nvim-tree.api")
+
+				-- Default mappings
+				api.config.mappings.default_on_attach(bufnr)
+
+				-- Unmap the 'f' key for filtering
+				vim.keymap.set("n", "f", "", { buffer = bufnr })
+			end,
+
 			view = {
 				width = 35,
 				relativenumber = true,
