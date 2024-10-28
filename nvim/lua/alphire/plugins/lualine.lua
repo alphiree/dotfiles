@@ -11,6 +11,26 @@ return {
 			-- 	-- ... the rest of your lualine config
 			-- },
 			sections = {
+				lualine_a = {
+					"mode",
+				},
+				lualine_b = {
+					{
+						function()
+							local count = 0
+							for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
+								if vim.api.nvim_buf_is_loaded(buffer) and vim.fn.buflisted(buffer) == 1 then
+									count = count + 1
+								end
+							end
+							return "B:" .. count
+						end,
+						-- color = { fg = "#ffffff", bg = "#007ACC" },
+					},
+					"branch",
+					"diff",
+					"diagnostics",
+				},
 				lualine_c = {
 					{ "filename", path = 1 },
 				},
