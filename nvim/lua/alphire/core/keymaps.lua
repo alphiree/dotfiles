@@ -115,8 +115,8 @@ keymap.set("n", "<C-j>", "<cmd>TmuxNavigateDown<CR>", { desc = "Window switch to
 -- keymap.set("n", "<leader>tf", "<cmd>tabnew %<CR>", { desc = "Open current buffer in new tab" }) --  move current buffer to new tab
 
 -- buffer management
-keymap.set("n", "<Tab>", ":BufferLineCycleNext<CR>", { desc = "Go to next buffer" })
-keymap.set("n", "<S-Tab>", ":BufferLineCyclePrev<CR>", { desc = "Go to previous buffer" })
+keymap.set("n", "<Tab>", ":bnext<CR>", { desc = "Go to next buffer" })
+keymap.set("n", "<S-Tab>", ":bprev<CR>", { desc = "Go to previous buffer" })
 keymap.set("n", "<leader>x", ":Bdelete<CR>", { desc = "Remove Current Buffer" })
 
 -- PLUGINS
