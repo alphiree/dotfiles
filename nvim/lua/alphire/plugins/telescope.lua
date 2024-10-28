@@ -15,6 +15,9 @@ return {
 						-- e.g. git_{create, delete, ...}_branch for the git_branches picker
 						["<C-h>"] = "which_key",
 					},
+					n = {
+						["d"] = require("telescope.actions").delete_buffer,
+					},
 				},
 				file_ignore_patterns = {
 					".git/.*",
