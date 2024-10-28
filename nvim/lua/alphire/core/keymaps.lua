@@ -136,7 +136,12 @@ keymap.set("n", "<leader>ef", "<cmd>NvimTreeFocus<CR>", { desc = "Focus to file 
 -- Telescope
 keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>", {})
 keymap.set("n", "<leader>fg", "<cmd>Telescope git_status<cr>", {})
-keymap.set("n", "<leader>fb", "<cmd>Telescope buffers<cr>", {})
+keymap.set(
+	"n",
+	"<leader>fb",
+	"<cmd>Telescope buffers sort_last_used=true sort_mru=true initial_mode=normal theme=ivy<cr>",
+	{ desc = "Open buffers" }
+)
 keymap.set("n", "<leader>fh", "<cmd>Telescope help_tags<cr>", {})
 keymap.set("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Fuzzy find recent files" })
 keymap.set("n", "<leader>fs", "<cmd>Telescope live_grep<cr>", { desc = "Find string in cwd" })
