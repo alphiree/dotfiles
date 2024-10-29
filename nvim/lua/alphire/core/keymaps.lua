@@ -136,6 +136,12 @@ keymap.set("n", "<leader>ef", "<cmd>NvimTreeFocus<CR>", { desc = "Focus to file 
 
 -- Telescope
 keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>", {})
+keymap.set(
+	"n",
+	"<leader>ff",
+	"<cmd>Telescope find_files sort_last_used=true sort_mru=true theme=ivy<cr>",
+	{ desc = "Open file" }
+)
 keymap.set("n", "<leader>fg", "<cmd>Telescope git_status<cr>", {})
 keymap.set(
 	"n",
