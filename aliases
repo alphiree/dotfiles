@@ -6,7 +6,7 @@ alias vv='nvim .'
 
 alias cls='clear'
 
-alias lc='ls -Glash --color'
+alias ls='ls -Glash --color'
 
 alias pylatest='pyenv install --list | grep --extended-regexp "^\s*[0-9][0-9.]*[0-9]\s*$" | tail -1'
 
