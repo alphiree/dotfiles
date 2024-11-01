@@ -15,6 +15,7 @@ return {
 					"mode",
 				},
 				lualine_b = {
+					-- shows the number of buffers
 					{
 						function()
 							local count = 0
@@ -25,7 +26,6 @@ return {
 							end
 							return "B:" .. count
 						end,
-						-- color = { fg = "#ffffff", bg = "#007ACC" },
 					},
 					"branch",
 					"diff",
