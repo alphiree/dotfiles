@@ -107,6 +107,13 @@ return {
 			on_attach = on_attach,
 		})
 
+		-- configure python server
+		lspconfig["ruff"].setup({
+			capabilities = capabilities,
+			on_attach = on_attach,
+			filetypes = { "python" },
+		})
+
 		-- configure Go server
 		lspconfig["gopls"].setup({
 			capabilities = capabilities,
