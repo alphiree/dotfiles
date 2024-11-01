@@ -33,6 +33,7 @@ return {
 				"pyright",
 				"tailwindcss",
 				"gopls",
+				"ruff",
 			},
 			-- auto-install configured servers (with lspconfig)
 			automatic_installation = true, -- not the same as ensure_installed
@@ -48,6 +49,7 @@ return {
 				"eslint_d", -- js linter
 				"marksman", -- markdown linter
 				"sqlfluff", -- sql linter
+				"mypy",
 			},
 		})
 	end,
