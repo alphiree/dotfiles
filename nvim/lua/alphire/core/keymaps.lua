@@ -154,6 +154,12 @@ keymap.set(
 	"<cmd>Telescope buffers sort_last_used=true sort_mru=true initial_mode=normal theme=ivy<cr>",
 	{ desc = "Open buffers" }
 )
+keymap.set(
+	"n",
+	"<leader>fp",
+	"<cmd>Telescope lsp_document_symbols initial_mode=normal theme=ivy ignore_symbols=variable,constant<cr>",
+	{ desc = "Open file" }
+)
 keymap.set("n", "<leader>fh", "<cmd>Telescope help_tags<cr>", {})
 keymap.set("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Fuzzy find recent files" })
 keymap.set("n", "<leader>fs", "<cmd>Telescope live_grep<cr>", { desc = "Find string in cwd" })
