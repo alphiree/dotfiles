@@ -69,3 +69,19 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 		vim.highlight.on_yank()
 	end,
 })
+
+vim.api.nvim_create_autocmd("VimEnter", {
+	desc = "Auto select virtualenv Nvim opens",
+	pattern = "*",
+	callback = function()
+		local pyproject = vim.fn.findfile("pyproject.toml", vim.fn.getcwd() .. ";")
+		local pipfile = vim.fn.findfile("Pipfile.lock", vim.fn.getcwd() .. ";")
+		local poetrylock = vim.fn.findfile("poetry.lock", vim.fn.getcwd() .. ";")
+
+		if pyproject ~= "" or pipfile ~= "" or poetrylock ~= "" then
+			require("venv-selector").retrieve_from_cache()
+			print("Virtual environment activated") -- Optional: Debug message
+		end
+	end,
+	once = true,
+})

@@ -10,15 +10,18 @@ return {
 			stay_on_this_version = true,
 		})
 		-- Initializing the venv from pyproject.toml in your workspace
+		-- Function to set up the autocommand for VimEnter (note: does not work here so better to include this in options lua)
 		vim.api.nvim_create_autocmd("VimEnter", {
-			desc = "Auto select virtualenv Nvim open",
+			desc = "Auto select virtualenv Nvim opens",
 			pattern = "*",
 			callback = function()
 				local pyproject = vim.fn.findfile("pyproject.toml", vim.fn.getcwd() .. ";")
 				local pipfile = vim.fn.findfile("Pipfile.lock", vim.fn.getcwd() .. ";")
 				local poetrylock = vim.fn.findfile("poetry.lock", vim.fn.getcwd() .. ";")
-				if pyproject ~= "" or (pipfile ~= "" or poetrylock ~= "") then
+
+				if pyproject ~= "" or pipfile ~= "" or poetrylock ~= "" then
 					require("venv-selector").retrieve_from_cache()
+					print("Virtual environment activated") -- Optional: Debug message
 				end
 			end,
 			once = true,
