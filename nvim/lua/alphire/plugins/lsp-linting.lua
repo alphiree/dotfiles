@@ -11,7 +11,7 @@ return {
 			javascriptreact = { "eslint_d" },
 			typescriptreact = { "eslint_d" },
 			svelte = { "eslint_d" },
-			python = { "pylint", "mypy", "ruff" },
+			python = { "mypy", "ruff" },
 			sql = { "sqlfluff" },
 		}
 
