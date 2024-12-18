@@ -69,8 +69,9 @@ return {
 				update_root = false,
 			},
 		})
-		if vim.fn.argc() == 0 then
-			vim.cmd("NvimTreeOpen")
-		end
+		-- open nvim tree by default when opening nvim
+		-- if vim.fn.argc() == 0 then
+		-- 	vim.cmd("NvimTreeOpen")
+		-- end
 	end,
 }
