@@ -63,10 +63,10 @@ return {
 			keymaps = {
 				["g?"] = { "actions.show_help", mode = "n" },
 				["<CR>"] = "actions.select",
-				-- ["<C-s>"] = { "actions.select", opts = { vertical = true } },
+				["<C-v>"] = { "actions.select", opts = { vertical = true } },
 				-- ["<C-h>"] = { "actions.select", opts = { horizontal = true } },
 				["<C-t>"] = { "actions.select", opts = { tab = true } },
-				["<C-p>"] = "actions.preview",
+				["<Bslash>"] = "actions.preview",
 				["<C-c>"] = { "actions.close", mode = "n" },
 				-- ["<C-l>"] = "actions.refresh",
 				["-"] = { "actions.parent", mode = "n" },
@@ -202,5 +202,9 @@ return {
 				border = "rounded",
 			},
 		})
+		-- open nvim tree by default when opening nvim
+		if vim.fn.argc() == 0 then
+			vim.cmd("Oil")
+		end
 	end,
 }
