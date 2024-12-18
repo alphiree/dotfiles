@@ -64,6 +64,11 @@ keymap.set("n", "N", "Nzzzv")
 
 -- oil nvim navigation
 keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory" })
+-- open oil in vertical split
+keymap.set("n", "<C-Bslash>", function()
+	vim.cmd("vsplit | wincmd l")
+	require("oil").open()
+end)
 
 -- Refreshes the current buffer
 keymap.set("n", "<leader>br", function()
