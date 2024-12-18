@@ -170,7 +170,13 @@ keymap.set("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<cr>", {})
 -- Gitsigns: reset hunk
 keymap.set("n", "<leader>gr", "<cmd>Gitsigns reset_hunk<cr>", {})
 -- Gitsigns: Stage/Add hunk
-keymap.set("n", "<leader>ga", "<cmd>Gitsigns stage_hunk<cr>", {})
+-- keymap.set("n", "<leader>ga", "<cmd>Gitsigns stage_hunk<cr>", { desc = "Stage hunk!" })
+
+keymap.set("n", "<leader>ga", function()
+	-- Reloads the file to reflect the changes
+	vim.cmd("Gitsigns stage_hunk")
+	print("Hunk staged!")
+end, { desc = "Stage Hunk" })
 -- Gitsigns: previous/next hunk
 keymap.set("n", "<leader>gn", "<cmd>Gitsigns next_hunk<cr>", {})
 keymap.set("n", "<leader>gN", "<cmd>Gitsigns prev_hunk<cr>", {})
