@@ -62,6 +62,9 @@ keymap.set("n", "<C-u>", "<C-u>zz")
 keymap.set("n", "n", "nzzzv")
 keymap.set("n", "N", "Nzzzv")
 
+-- oil nvim navigation
+keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory" })
+
 -- Refreshes the current buffer
 keymap.set("n", "<leader>br", function()
 	-- Reloads the file to reflect the changes
