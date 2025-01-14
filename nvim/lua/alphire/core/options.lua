@@ -85,3 +85,67 @@ vim.api.nvim_create_autocmd("VimEnter", {
 	end,
 	once = true,
 })
+
+-- Replace functionality for visual selection with next instance navigation
+vim.keymap.set("v", "<leader>r", function()
+	-- Store the visual selection
+	vim.cmd('normal! "vy"')
+	local selected_text = vim.fn.getreg("v")
+
+	-- Prompt for replacement text
+	local replacement = vim.fn.input("Replace '" .. selected_text .. "' with: ")
+	if replacement == "" then
+		return
+	end
+
+	-- Ask if user wants to replace all instances
+	local replace_all = vim.fn.input("Replace all instances? (y/n): ")
+
+	-- Replace current instance first
+	vim.cmd('normal! gv"_c' .. replacement)
+
+	if replace_all:lower() == "y" then
+		-- Replace all remaining instances
+		local cmd = "%s/" .. vim.fn.escape(selected_text, "/\\") .. "/" .. vim.fn.escape(replacement, "/\\") .. "/gc"
+		vim.cmd(cmd)
+	else
+		-- Function to find and prompt for next instance
+		local function find_and_prompt_next()
+			-- Search for next instance
+			local found = vim.fn.search(selected_text, "W")
+			if found == 0 then
+				print("No more instances found.")
+				return
+			end
+
+			-- Move cursor to the instance and center the screen
+			vim.cmd("normal! zz")
+
+			-- Highlight the instance
+			vim.cmd("normal! v" .. string.len(selected_text) - 1 .. "l")
+			vim.cmd("redraw") -- Force screen update to show the selection
+
+			-- Ask if user wants to replace this instance
+			local do_replace = vim.fn.input("Replace this instance? (y/n/q): ")
+
+			if do_replace:lower() == "y" then
+				-- Replace this instance
+				vim.cmd("normal! c" .. replacement)
+				-- Continue to next instance
+				vim.schedule(find_and_prompt_next)
+			elseif do_replace:lower() == "n" then
+				-- Clear the visual selection and continue
+				vim.cmd("normal! <Esc>")
+				vim.schedule(find_and_prompt_next)
+			elseif do_replace:lower() == "q" then
+				-- Quit the replacement process
+				vim.cmd("normal! <Esc>")
+				print("Replacement process stopped.")
+				return
+			end
+		end
+
+		-- Start finding next instances
+		find_and_prompt_next()
+	end
+end, { noremap = true, silent = true, desc = "Replace selection with navigation" })
