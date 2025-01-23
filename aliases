@@ -46,3 +46,10 @@ gitshowlog() {
   }'
 }
 
+gitpurgerebase() {
+    # Prune remote-tracking branches that no longer exist on the remote
+    git remote prune origin
+
+    # Find and delete local branches that have gone (no longer exist on the remote)
+    git branch -vv | awk '/: gone]/{print $1}' | grep -v '^\*' | xargs -r git branch -D
+}
