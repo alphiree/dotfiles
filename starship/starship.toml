@@ -36,12 +36,13 @@ style = "bold #9d7acf"
 always_show_remote = false
 symbol = ' '
 # truncation_length = 4
-truncation_symbol = ''
+# truncation_symbol = ''
 style = 'bold #a9dc76'
 # ignore_branches = ['master', 'main']
 
 [git_status]
 style = "bold #ff5555"
+disabled = false
 
 [git_metrics]
 added_style = "#a9dc76"
