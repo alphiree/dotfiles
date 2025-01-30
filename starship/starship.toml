@@ -35,7 +35,7 @@ style = "bold #9d7acf"
 [git_branch]
 always_show_remote = false
 symbol = ' '
-truncation_length = 4
+# truncation_length = 4
 truncation_symbol = ''
 style = 'bold #a9dc76'
 # ignore_branches = ['master', 'main']
