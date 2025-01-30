@@ -87,6 +87,9 @@ disabled = true
 # [aws.profile_aliases]
 # CompanyGroupFrobozzOnCallAccess = 'Frobozz'
 
+[localip]
+ssh_only = true
+disabled = false
 
 
 
