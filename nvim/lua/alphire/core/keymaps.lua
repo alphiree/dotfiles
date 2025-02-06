@@ -17,12 +17,20 @@ keymap.set("n", "<leader>nh", ":nohl<CR>", { desc = "Clear search highlights" })
 keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 
 -- setting Ctrl+S to save file
+-- -- Normal mode mapping
+-- keymap.set("n", "<C-S>", ":update<CR>", { silent = true })
+-- -- Visual mode mapping
+-- keymap.set("v", "<C-S>", "<C-C>:update<CR>", { silent = true })
+-- -- Insert mode mapping
+-- keymap.set("i", "<C-S>", "<C-O>:update<CR><C-\\><C-n>", { silent = true })
+
+-- setting zz to save file
 -- Normal mode mapping
-keymap.set("n", "<C-S>", ":update<CR>", { silent = true })
+keymap.set("n", "zz", ":update<CR>", { silent = true })
 -- Visual mode mapping
-keymap.set("v", "<C-S>", "<C-C>:update<CR>", { silent = true })
+keymap.set("v", "zz", "<C-C>:update<CR>", { silent = true })
 -- Insert mode mapping
-keymap.set("i", "<C-S>", "<C-O>:update<CR><C-\\><C-n>", { silent = true })
+keymap.set("i", "zz", "<C-O>:update<CR><C-\\><C-n>", { silent = true })
 
 -- fold all inside the current file
 keymap.set("n", "<leader>k", "zM", {})
