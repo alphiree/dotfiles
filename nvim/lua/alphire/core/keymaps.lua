@@ -29,8 +29,8 @@ keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 keymap.set("n", "zz", ":update<CR>", { silent = true })
 -- Visual mode mapping
 keymap.set("v", "zz", "<C-C>:update<CR>", { silent = true })
--- Insert mode mapping
-keymap.set("i", "zz", "<C-O>:update<CR><C-\\><C-n>", { silent = true })
+-- -- Insert mode mapping
+-- keymap.set("i", "zz", "<C-O>:update<CR><C-\\><C-n>", { silent = true })
 
 -- fold all inside the current file
 keymap.set("n", "<leader>k", "zM", {})
