@@ -32,6 +32,8 @@ alias opd='xdg-open .'
 
 alias obs='exec /usr/bin/flatpak run --branch=stable --arch=x86_64 md.obsidian.Obsidian & disown'
 
+alias cursor='/home/alphire/appimage_bin/cursor . & disown'
+
 gitshowlog() {
   git log --all --oneline --color --format="%H %ad %an %s" --date=short | \
   awk -v commit="$1" '{ 
