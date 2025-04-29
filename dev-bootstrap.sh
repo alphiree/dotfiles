@@ -189,6 +189,7 @@ install_core_packages() {
     install_package "wget"
     install_package "curl"
     install_package "make"
+    install_package "unzip"
 }
 
 install_neovim() {
@@ -298,7 +299,7 @@ setup_python() {
     # echo_step "Installing Poetry"
     # curl -sSL https://install.python-poetry.org | python3 -
     # echo -e 'export PATH="$HOME/.local/bin:$PATH"' >> $SHELL_RC
-    
+     
     # Configure poetry
     # echo_step "Configuring Poetry"
     # poetry config virtualenvs.in-project true
@@ -343,12 +344,16 @@ configure_system() {
     
     # Change repeat rate
     echo_step "Setting keyboard repeat rate"
-    if command -v xset &> /dev/null; then
+    if command -v xset &> /dev/null && [ -n "$DISPLAY" ]; then
         xset r rate 300 25
         xset q | grep 'repeat delay'
         
-        # Add to shell rc to persist
-        echo 'xset r rate 300 25' >> $SHELL_RC
+        # Add to shell rc to persist, but make it conditional
+        echo 'if [ -n "$DISPLAY" ]; then xset r rate 300 25; fi' >> $SHELL_RC
+    else
+        echo_step "Skipping xset commands - no display available"
+        # Add the command to rc file anyway, but make it conditional
+        echo 'if [ -n "$DISPLAY" ]; then xset r rate 300 25; fi' >> $SHELL_RC
     fi
     
     # Link fd command if using fd-find package
@@ -360,7 +365,11 @@ configure_system() {
     # Set up tmux-sessionizer
     echo_step "Setting up tmux-sessionizer"
     mkdir -p ~/.local/scripts
-    ln -s ~/dotfiles/tmux-sessionizer ~/.local/scripts/tmux-sessionizer
+    if [ ! -e ~/.local/scripts/tmux-sessionizer ]; then
+        ln -s ~/dotfiles/tmux-sessionizer ~/.local/scripts/tmux-sessionizer
+    else
+        echo_step "tmux-sessionizer already exists, skipping symlink creation"
+    fi
     echo "export PATH=\"\$PATH:\$HOME/.local/scripts\"" >> $SHELL_RC
     chmod +x ~/.local/scripts/tmux-sessionizer
     
@@ -396,6 +405,7 @@ main() {
     install_git
     install_core_packages
     install_neovim
+    install_terminal_tools
     setup_tmux
     setup_python
     install_lazygit
