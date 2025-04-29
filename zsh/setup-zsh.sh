@@ -1,4 +1,6 @@
 #!/bin/bash
+# Exit on error
+set -e
 
 echo "Setting up ZSH..."
 
@@ -77,6 +79,7 @@ install_package() {
     $PKG_INSTALL $package
 }
 
+detect_package_manager
 
 # Install zsh if not already installed
 if ! command -v zsh &> /dev/null; then
