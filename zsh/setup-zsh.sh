@@ -1,6 +1,4 @@
 #!/bin/bash
-# Exit on error
-set -e
 
 echo "Setting up ZSH..."
 
