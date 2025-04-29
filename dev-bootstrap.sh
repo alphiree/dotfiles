@@ -32,10 +32,31 @@ echo_error() {
 
 # Improved shell detection function
 detect_shell() {
-    # First determine which shell we're running
+    # First check if we're running in zsh
     if [ -n "$ZSH_VERSION" ]; then
         SHELL_TYPE="zsh"
-        
+    # Then check if zsh is installed and the default shell
+    elif [ -n "$SHELL" ] && [[ "$SHELL" == *"zsh"* ]]; then
+        SHELL_TYPE="zsh"
+    # Also check if zsh is in /etc/passwd as the user's shell
+    elif grep -q "$(whoami).*zsh" /etc/passwd 2>/dev/null; then
+        SHELL_TYPE="zsh"
+    # Also check if zsh is installed
+    elif command -v zsh >/dev/null 2>&1; then
+        echo_step "Found zsh installed but not running in zsh session"
+        read -p "Would you like to use zsh configuration? (Y/n): " use_zsh
+        if [[ "$use_zsh" =~ ^[Nn]$ ]]; then
+            SHELL_TYPE="bash"
+        else
+            SHELL_TYPE="zsh"
+        fi
+    # Fallback to bash
+    else
+        SHELL_TYPE="bash"
+    fi
+    
+    # Now determine the appropriate config file based on shell type
+    if [ "$SHELL_TYPE" = "zsh" ]; then
         # Check if ZDOTDIR is set (custom Zsh config location)
         if [ -n "$ZDOTDIR" ]; then
             SHELL_RC="$ZDOTDIR/.zshrc"
@@ -49,9 +70,7 @@ detect_shell() {
             SHELL_RC="$HOME/.zshrc"
         fi
     else
-        SHELL_TYPE="bash"
-        
-        # Check if XDG config exists
+        # Check if XDG config exists for bash
         if [ -f "$HOME/.config/bash/bashrc" ]; then
             SHELL_RC="$HOME/.config/bash/bashrc"
             # Ensure .bashrc sources the XDG config
