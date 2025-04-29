@@ -14,5 +14,6 @@ iterm2/
 ## Ignore specific folders
 tmux/plugins/
 tmux/tpm_plugin/
+zsh/plugins/
 
 lazygit/state.yml
