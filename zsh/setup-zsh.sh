@@ -104,7 +104,7 @@ EOL
 
 ## Change default shell to zsh
 echo "Changing default shell to zsh..."
-chsh -s "$(which zsh)"
+sudo chsh -s "$(which zsh)"
 
 echo "ZSH setup complete! Please log out and log back in for changes to take effect."
 echo "Your ZSH configuration will be loaded from ~/.config/zsh/.zshrc"
