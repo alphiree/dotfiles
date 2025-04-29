@@ -17,18 +17,6 @@ echo_error() {
 ###################
 # DETECT ENVIRONMENT
 ###################
-# Detect shell
-# Old version (commented out properly)
-# detect_shell() {
-#     if [ -n "$ZSH_VERSION" ]; then
-#         SHELL_TYPE="zsh"
-#         SHELL_RC="$HOME/.zshrc"
-#     else
-#         SHELL_TYPE="bash"
-#         SHELL_RC="$HOME/.bashrc"
-#     fi
-#     echo_step "Detected shell: $SHELL_TYPE (config: $SHELL_RC)"
-# }
 
 # Improved shell detection function
 detect_shell() {
@@ -226,18 +214,22 @@ install_terminal_tools() {
     
     # Install Starship prompt
     echo_step "Installing Starship prompt"
-    curl -sS https://starship.rs/install.sh | sh
     
-    # Configure Starship for the detected shell
-    if [ "$SHELL_TYPE" = "zsh" ]; then
-        echo 'eval "$(starship init zsh)"' >> $SHELL_RC
+    if command -v starship &> /dev/null; then
+        echo_step "Starship already installed, skipping"
     else
-        echo 'eval "$(starship init bash)"' >> $SHELL_RC
+        curl -sS https://starship.rs/install.sh | sh
+        # Configure Starship for the detected shell
+        if [ "$SHELL_TYPE" = "zsh" ]; then
+            echo 'eval "$(starship init zsh)"' >> $SHELL_RC
+        else
+            echo 'eval "$(starship init bash)"' >> $SHELL_RC
+        fi
+        
+        # Set Starship config location
+        mkdir -p ~/.config/starship
+        echo 'export STARSHIP_CONFIG=~/.config/starship/starship.toml' >> $SHELL_RC
     fi
-    
-    # Set Starship config location
-    mkdir -p ~/.config/starship
-    echo 'export STARSHIP_CONFIG=~/.config/starship/starship.toml' >> $SHELL_RC
 }
 
 setup_tmux() {
@@ -249,8 +241,8 @@ setup_tmux() {
 
     # Download tmux plugin manager
     echo_header "Downloading tmux plugin manager"
-    mkdir -p ~/.config/tmux/tpm_plugin
     if [ ! -d ~/.config/tmux/tpm_plugin/tpm ]; then
+        mkdir -p ~/.config/tmux/tpm_plugin
         git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/tpm_plugin/tpm
     else
         echo_step "tmux plugin manager already installed, skipping"
@@ -288,14 +280,13 @@ setup_python() {
     mkdir -p ~/workflow-packages/
     if [ ! -d ~/workflow-packages/.pyenv ]; then
         git clone https://github.com/pyenv/pyenv.git ~/workflow-packages/.pyenv
+        # Configure shell for pyenv
+        echo_step "Configuring pyenv in $SHELL_RC"
+        echo -e 'export PYENV_ROOT="$HOME/workflow-packages/.pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"' >> $SHELL_RC
+        echo -e 'eval "$(pyenv init --path)"\neval "$(pyenv init -)"' >> $SHELL_RC
     else
         echo_step "pyenv already installed, skipping"
     fi
-    
-    # Configure shell for pyenv
-    echo_step "Configuring pyenv in $SHELL_RC"
-    echo -e 'export PYENV_ROOT="$HOME/workflow-packages/.pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"' >> $SHELL_RC
-    echo -e 'eval "$(pyenv init --path)"\neval "$(pyenv init -)"' >> $SHELL_RC
     
     # Install poetry
     # echo_step "Installing Poetry"
@@ -310,6 +301,12 @@ setup_python() {
 
 install_lazygit() {
     echo_header "Installing LazyGit"
+    
+    # Check if lazygit is already installed
+    if command -v lazygit &> /dev/null; then
+        echo_step "LazyGit is already installed, skipping..."
+        return
+    fi
     
     # Get the latest version
     LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
@@ -338,12 +335,50 @@ configure_system() {
     
     # Swap caps to escape
     echo_step "Configuring keyboard (caps:swapescape)"
-    if [ -f "/etc/default/keyboard" ]; then
-        sudo sed -i 's/XKBOPTIONS=".*"/XKBOPTIONS="caps:swapescape"/' /etc/default/keyboard
-    else
-        sudo bash -c 'echo "XKBOPTIONS=\"caps:swapescape\"" >> /etc/default/keyboard'
-    fi
     
+    # Debian/Ubuntu/Mint approach
+    if [ -f "/etc/default/keyboard" ]; then
+        echo_step "Using Debian/Ubuntu/Mint method"
+        sudo sed -i 's/XKBOPTIONS=".*"/XKBOPTIONS="caps:swapescape"/' /etc/default/keyboard
+        sudo dpkg-reconfigure -f noninteractive keyboard-configuration 2>/dev/null || true
+    # Arch Linux approach
+    elif [ -f "/etc/X11/xorg.conf.d/00-keyboard.conf" ] || command -v localectl >/dev/null 2>&1; then
+        echo_step "Using Arch Linux method"
+        # Create keyboard config if it doesn't exist
+        if [ ! -f "/etc/X11/xorg.conf.d/00-keyboard.conf" ]; then
+            sudo mkdir -p /etc/X11/xorg.conf.d
+            sudo touch /etc/X11/xorg.conf.d/00-keyboard.conf
+        fi
+        
+        # Configure using localectl if available
+        if command -v localectl >/dev/null 2>&1; then
+            sudo localectl set-x11-keymap us "" "" caps:swapescape
+        else
+            # Direct configuration
+            sudo bash -c 'cat > /etc/X11/xorg.conf.d/00-keyboard.conf << EOF
+                Section "InputClass"
+                        Identifier "system-keyboard"
+                        MatchIsKeyboard "on"
+                        Option "XkbOptions" "caps:swapescape"
+                EndSection
+                EOF'
+        fi
+    # Fallback for other distros - use xmodmap
+    else
+        echo_step "Using fallback method with xmodmap"
+        echo 'clear lock' > ~/.Xmodmap
+        echo 'keycode 9 = Caps_Lock NoSymbol Caps_Lock' >> ~/.Xmodmap
+        echo 'keycode 66 = Escape NoSymbol Escape' >> ~/.Xmodmap
+        
+        # Add to shell rc to persist
+        echo 'if [ -f ~/.Xmodmap ] && [ -n "$DISPLAY" ]; then xmodmap ~/.Xmodmap; fi' >> $SHELL_RC
+        
+        # Apply immediately if display is available
+        if [ -n "$DISPLAY" ]; then
+            xmodmap ~/.Xmodmap 2>/dev/null || true
+        fi
+    fi
+
     # Change repeat rate
     echo_step "Setting keyboard repeat rate"
     if command -v xset &> /dev/null && [ -n "$DISPLAY" ]; then
@@ -366,14 +401,14 @@ configure_system() {
     
     # Set up tmux-sessionizer
     echo_step "Setting up tmux-sessionizer"
-    mkdir -p ~/.local/scripts
     if [ ! -e ~/.local/scripts/tmux-sessionizer ]; then
+        mkdir -p ~/.local/scripts
         ln -s ~/dotfiles/tmux-sessionizer ~/.local/scripts/tmux-sessionizer
+        echo "export PATH=\"\$PATH:\$HOME/.local/scripts\"" >> $SHELL_RC
+        chmod +x ~/.local/scripts/tmux-sessionizer
     else
         echo_step "tmux-sessionizer already exists, skipping symlink creation"
     fi
-    echo "export PATH=\"\$PATH:\$HOME/.local/scripts\"" >> $SHELL_RC
-    chmod +x ~/.local/scripts/tmux-sessionizer
     
     # Install fonts
     echo_step "Installing JetBrains Mono and Nerd Fonts"
@@ -396,6 +431,10 @@ configure_system() {
         fi
         # Delete the zip file regardless
         rm JetBrainsMono.zip
+        # Refresh font cache
+        if command -v fc-cache &> /dev/null; then
+            fc-cache -f -v
+        fi
     else
         # Check if fonts are already installed
         if ls ~/.local/share/fonts/JetBrainsMono*.ttf > /dev/null 2>&1 || ls ~/.local/share/fonts/JetBrainsMonoNerdFont*.ttf > /dev/null 2>&1; then
@@ -406,19 +445,17 @@ configure_system() {
             echo_step "Unzipping JetBrains Mono Nerd Fonts"
             unzip JetBrainsMono.zip -d ~/.local/share/fonts
             rm JetBrainsMono.zip
+            # Refresh font cache
+            if command -v fc-cache &> /dev/null; then
+                fc-cache -f -v
+            fi
         fi
-    fi
-    
-    # Refresh font cache
-    if command -v fc-cache &> /dev/null; then
-        fc-cache -f -v
     fi
 }
 
 ###################
 # MAIN EXECUTION
 ###################
-
 main() {
     echo_header "🚀 Starting system setup"
     
