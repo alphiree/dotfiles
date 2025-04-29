@@ -262,7 +262,6 @@ setup_python() {
     echo_step "Installing pyenv dependencies"
     install_package "build-essential"
     install_package "libssl-dev"
-    install_package "zlib1g-dev"
     install_package "libbz2-dev"
     install_package "libreadline-dev"
     install_package "libsqlite3-dev"
