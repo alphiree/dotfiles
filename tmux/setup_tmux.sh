@@ -18,11 +18,11 @@ wget "https://invisible-mirror.net/archives/ncurses/ncurses-6.2.tar.gz" -P ~/
 wget "https://github.com/libevent/libevent/releases/download/release-2.1.12-stable/libevent-2.1.12-stable.tar.gz" -P ~/
 
 # Download tmux (version 3.4)
-wget "https://github.com/tmux/tmux/releases/download/3.2-rc/tmux-3.4.tar.gz" -P ~/
+wget "https://github.com/tmux/tmux/releases/download/3.4/tmux-3.4.tar.gz" -P ~/
 
 tar xvf "libevent-2.1.12-stable.tar.gz"
 tar xvf "ncurses-6.2.tar.gz"
-tar xvf "tmux-3.2-rc4.tar.gz"
+tar xvf "tmux-3.4.tar.gz"
 
 # Install libevent
 cd libevent-2.1.12-stable
