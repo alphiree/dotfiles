@@ -295,14 +295,14 @@ setup_python() {
     echo -e 'eval "$(pyenv init --path)"\neval "$(pyenv init -)"' >> $SHELL_RC
     
     # Install poetry
-    echo_step "Installing Poetry"
-    curl -sSL https://install.python-poetry.org | python3 -
-    echo -e 'export PATH="$HOME/.local/bin:$PATH"' >> $SHELL_RC
+    # echo_step "Installing Poetry"
+    # curl -sSL https://install.python-poetry.org | python3 -
+    # echo -e 'export PATH="$HOME/.local/bin:$PATH"' >> $SHELL_RC
     
     # Configure poetry
-    echo_step "Configuring Poetry"
-    poetry config virtualenvs.in-project true
-    poetry config virtualenvs.prefer-active-python true
+    # echo_step "Configuring Poetry"
+    # poetry config virtualenvs.in-project true
+    # poetry config virtualenvs.prefer-active-python true
 }
 
 install_lazygit() {
