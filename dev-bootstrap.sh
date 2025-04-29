@@ -382,9 +382,30 @@ configure_system() {
     fi
     
     mkdir -p ~/.local/share/fonts
-    wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/JetBrainsMono.zip
-    unzip JetBrainsMono.zip -d ~/.local/share/fonts
-    rm JetBrainsMono.zip
+    # Check if the zip file already exists
+    if [ -f "JetBrainsMono.zip" ]; then
+        echo_step "JetBrainsMono.zip already exists, using existing file"
+        # Check if fonts are already installed
+        if ls ~/.local/share/fonts/JetBrainsMono*.ttf > /dev/null 2>&1 || ls ~/.local/share/fonts/JetBrainsMonoNerdFont*.ttf > /dev/null 2>&1; then
+            echo_step "JetBrains Mono Nerd Fonts already installed, skipping unzip"
+        else
+            echo_step "Unzipping JetBrains Mono Nerd Fonts"
+            unzip JetBrainsMono.zip -d ~/.local/share/fonts
+        fi
+        # Delete the zip file regardless
+        rm JetBrainsMono.zip
+    else
+        # Check if fonts are already installed
+        if ls ~/.local/share/fonts/JetBrainsMono*.ttf > /dev/null 2>&1 || ls ~/.local/share/fonts/JetBrainsMonoNerdFont*.ttf > /dev/null 2>&1; then
+            echo_step "JetBrains Mono Nerd Fonts already installed, skipping download"
+        else
+            echo_step "Downloading JetBrains Mono Nerd Fonts"
+            wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/JetBrainsMono.zip
+            echo_step "Unzipping JetBrains Mono Nerd Fonts"
+            unzip JetBrainsMono.zip -d ~/.local/share/fonts
+            rm JetBrainsMono.zip
+        fi
+    fi
     
     # Refresh font cache
     if command -v fc-cache &> /dev/null; then
