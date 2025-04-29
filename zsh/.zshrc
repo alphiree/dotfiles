@@ -1,5 +1,11 @@
 #!/bin/sh
+HISTSIZE=10000
+SAVEHIST=100000
+HISTFILE=~/.zsh_history
+
 export ZDOTDIR=$HOME/.config/zsh
+
+
 setopt appendhistory
 
 # Basic options
@@ -27,3 +33,11 @@ zsh_add_plugin "hlissner/zsh-autopair"
 
 
 
+eval "$(starship init zsh)"
+export STARSHIP_CONFIG=~/.config/starship/starship.toml
+export PYENV_ROOT="$HOME/workflow-packages/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
+if [ -n "$DISPLAY" ]; then xset r rate 300 25; fi
+export PATH="$PATH:$HOME/.local/scripts"
