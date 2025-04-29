@@ -160,11 +160,6 @@ install_git() {
     install_package "git"
 }
 
-clone_dotfiles() {
-    echo_header "Cloning dotfiles repository"
-    git clone https://github.com/alphiree/dotfiles.git ~/dotfiles/
-}
-
 install_core_packages() {
     echo_header "Installing core packages"
     install_package "fzf"
@@ -368,7 +363,6 @@ main() {
     detect_package_manager
     update_system
     install_git
-    clone_dotfiles
     install_core_packages
     install_neovim
     setup_tmux
