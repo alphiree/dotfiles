@@ -4,6 +4,13 @@ set -e
 
 echo "Setting up ZSH..."
 
+echo_step() {
+    echo -e "\033[1;32m-->\033[0m $1"
+}
+echo_error() {
+    echo -e "\033[1;31mERROR:\033[0m $1"
+}
+
 # Detect package manager
 detect_package_manager() {
     if command -v pacman &> /dev/null; then
