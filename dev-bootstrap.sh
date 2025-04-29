@@ -18,16 +18,17 @@ echo_error() {
 # DETECT ENVIRONMENT
 ###################
 # Detect shell
-%% detect_shell() {
-    if [ -n "$ZSH_VERSION" ]; then
-        SHELL_TYPE="zsh"
-        SHELL_RC="$HOME/.zshrc"
-    else
-        SHELL_TYPE="bash"
-        SHELL_RC="$HOME/.bashrc"
-    fi
-    echo_step "Detected shell: $SHELL_TYPE (config: $SHELL_RC)"
-} %%
+# Old version (commented out properly)
+# detect_shell() {
+#     if [ -n "$ZSH_VERSION" ]; then
+#         SHELL_TYPE="zsh"
+#         SHELL_RC="$HOME/.zshrc"
+#     else
+#         SHELL_TYPE="bash"
+#         SHELL_RC="$HOME/.bashrc"
+#     fi
+#     echo_step "Detected shell: $SHELL_TYPE (config: $SHELL_RC)"
+# }
 
 # Improved shell detection function
 detect_shell() {
