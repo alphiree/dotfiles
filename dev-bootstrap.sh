@@ -241,8 +241,9 @@ setup_tmux() {
     echo_header "Setting up tmux"
     
     # Run the tmux setup script
-    bash ~/dotfiles/tmux/setup_tmux.sh 
-    
+    ## bash ~/dotfiles/tmux/setup_tmux.sh 
+    install_package "tmux"
+
     # Download tmux plugin manager
     echo_header "Downloading tmux plugin manager"
     mkdir -p ~/.config/tmux/tpm_plugin
