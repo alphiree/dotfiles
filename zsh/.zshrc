@@ -40,3 +40,5 @@ eval "$(pyenv init --path)"
 eval "$(pyenv init -)"
 if [ -n "$DISPLAY" ]; then xset r rate 300 25; fi
 export PATH="$PATH:$HOME/.local/scripts"
+export PATH="$HOME/.local/bin:$PATH"
+eval "$(zoxide init zsh)"
