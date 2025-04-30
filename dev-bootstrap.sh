@@ -198,6 +198,15 @@ install_neovim() {
     else
         install_package "neovim"
     fi
+
+    if command -v magick &> /dev/null; then
+        echo_step "magick already installed, skipping"
+    else
+        echo_header "Installing Luarocks, Lua51, and magick to support image preview inside nvim"
+        install_package "luarocks"
+        install_package "lua51"
+        luarocks install magick --lua-version=5.1
+    fi
 }
 
 install_terminal_tools() {
