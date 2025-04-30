@@ -22,6 +22,7 @@ autoload -Uz colors && colors
 
 # Useful Functions (needed for plugins)
 source "$ZDOTDIR/zsh-functions"
+source "$HOME/dotfiles/aliases"
 
 # Plugins
 zsh_add_plugin "zsh-users/zsh-autosuggestions"
@@ -30,8 +31,6 @@ zsh_add_plugin "hlissner/zsh-autopair"
 
 # Simple default-like prompt (uncomment if needed)
 # PS1='%n@%m %~ %# '
-
-
 
 eval "$(starship init zsh)"
 export STARSHIP_CONFIG=~/.config/starship/starship.toml
