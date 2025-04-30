@@ -179,7 +179,12 @@ install_core_packages() {
     install_package "make"
     install_package "unzip"
     install_package "go"
-    install_package "zoxide"
+    ## to be able to copy and paste inside nvim
+    if [ "$PKG_MANAGER" = "pacman" ]; then
+        install_package "wl-clipboard"
+    elif [ "$PKG_MANAGER" = "apt" ]; then
+        install_package "xclip"
+    fi
 }
 
 install_neovim() {
@@ -229,6 +234,21 @@ install_terminal_tools() {
         # Set Starship config location
         mkdir -p ~/.config/starship
         echo 'export STARSHIP_CONFIG=~/.config/starship/starship.toml' >> $SHELL_RC
+    fi
+
+    if command -v zoxide &> /dev/null; then
+        echo_step "zoxide already installed, skipping"
+    else
+        echo_step "installing zoxide"
+        ## Install via script
+        curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+        # Configure Starship for the detected shell
+        echo -e 'export PATH="$HOME/.local/bin:$PATH"' >> $SHELL_RC
+        if [ "$SHELL_TYPE" = "zsh" ]; then
+            echo 'eval "$(zoxide init zsh)"' >> $SHELL_RC
+        else
+            echo 'eval "$(zoxide init bash)"' >> $SHELL_RC
+        fi
     fi
 }
 
@@ -385,12 +405,17 @@ configure_system() {
         xset r rate 300 25
         xset q | grep 'repeat delay'
         
-        # Add to shell rc to persist, but make it conditional
-        echo 'if [ -n "$DISPLAY" ]; then xset r rate 300 25; fi' >> $SHELL_RC
+        # Check if the command is already in the shell rc file
+        if ! grep -q 'xset r rate 300 25' "$SHELL_RC"; then
+            # Add the command to rc file if it's not already present
+            echo 'if [ -n "$DISPLAY" ]; then xset r rate 300 25; fi' >> "$SHELL_RC"
+        fi
     else
         echo_step "Skipping xset commands - no display available"
-        # Add the command to rc file anyway, but make it conditional
-        echo 'if [ -n "$DISPLAY" ]; then xset r rate 300 25; fi' >> $SHELL_RC
+        # Check if the command is already in the shell rc file, even when no display is available
+        if ! grep -q 'xset r rate 300 25' "$SHELL_RC"; then
+            echo 'if [ -n "$DISPLAY" ]; then xset r rate 300 25; fi' >> "$SHELL_RC"
+        fi
     fi
     
     # Link fd command if using fd-find package
