@@ -288,22 +288,7 @@ setup_python() {
 
     # Install Python3
     install_package "python3"
-    
-    # Install pyenv dependencies
-    # echo_step "Installing pyenv dependencies"
-    # install_package "build-essential"
-    # install_package "libssl-dev"
-    # install_package "libreadline-dev"
-    # install_package "libsqlite3-dev"
-    # install_package "llvm"
-    # install_package "libncursesw5-dev"
-    # install_package "xz-utils"
-    # install_package "tk-dev"
-    # install_package "libxml2-dev"
-    # install_package "libxmlsec1-dev"
-    # install_package "libffi-dev"
-    # install_package "liblzma-dev"
-    
+
     # Install pyenv
     echo_step "Installing pyenv"
     mkdir -p ~/workflow-packages/
@@ -318,14 +303,18 @@ setup_python() {
     fi
     
     # Install poetry
-    # echo_step "Installing Poetry"
-    # curl -sSL https://install.python-poetry.org | python3 -
-    # echo -e 'export PATH="$HOME/.local/bin:$PATH"' >> $SHELL_RC
+    if command -v poetry &> /dev/null; then
+        echo_step "poetry already installed, skipping"
+    else
+        echo_step "Installing Poetry"
+        curl -sSL https://install.python-poetry.org | python3 -
+        if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' "$SHELL_RC"; then
+            # Add the command to rc file if it's not already present
+            echo -e 'export PATH="$HOME/.local/bin:$PATH"' >> $SHELL_RC
+        fi
+        poetry config virtualenvs.in-project true
+    fi
      
-    # Configure poetry
-    # echo_step "Configuring Poetry"
-    # poetry config virtualenvs.in-project true
-    # poetry config virtualenvs.prefer-active-python true
 }
 
 install_lazygit() {
