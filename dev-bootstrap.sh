@@ -180,6 +180,7 @@ install_core_packages() {
     install_package "unzip"
     install_package "go"
     install_package "fuse"
+    install_package "ntfs-3g" # for mounting
     ## to be able to copy and paste inside nvim
     if [ "$PKG_MANAGER" = "pacman" ]; then
         install_package "wl-clipboard"
