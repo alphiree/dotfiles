@@ -1,34 +1,33 @@
-## Contains the configuration for Starship prompt
-
-# # First param ─┌
-# [username]
-# format = " [$user]($style) in "
-# style_user = "#a9dc76"
-# style_root = "#a9dc76"
-# show_always = true
-#
-# # Second param
-# [hostname]
-# format = "[$hostname]($style) in "
-# style = "bold dimmed red"
-# trim_at = "-"
-# ssh_only = false
-# disabled = false
-
-# Inserts a blank line between shell prompts
+# Contains the configuration for Starship prompt
 add_newline = true
 
-# Replace the '❯' symbol in the prompt with '➜'
+## Replace the '❯' symbol in the prompt with '➜'
 [character] # the name of the module we are configuring is 'character'
 success_symbol = '[➜](bold #a9dc76)' # the 'success_symbol' segment is being set to '➜' with the color 'bold green'
 error_symbol = '[➜](bold #ff5555)' # The 'error_symbol' segment is being set to '➜' with the color 'bold red'
 
+## First param
+[username]
+format = "[$user]($style)"
+style_user = "#a9dc76"
+style_root = "#a9dc76"
+show_always = true
+
+## Second param
+[hostname]
+disabled = false
+format = "[@$hostname]($style) "
+# style = "bold dimmed red"
+style = "white"
+trim_at = "-"
+ssh_only = false
 
 [directory]
 read_only = "🔒"
 # truncation_length = 3 
 # truncation_symbol = "…"
 truncate_to_repo = true
+# style = "#a9dc76"
 style = "bold #9d7acf"
 # style = "bold white"
 
