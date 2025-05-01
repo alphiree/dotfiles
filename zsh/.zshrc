@@ -30,7 +30,19 @@ zsh_add_plugin "zsh-users/zsh-syntax-highlighting"
 zsh_add_plugin "hlissner/zsh-autopair"
 
 ## Bindings
-bindkey '^[[A' autosuggest-accept  # Up arrow
+### Accept autosuggestion with Up arrow only if visible, otherwise do history search
+function smart-up-line-or-autosuggest() {
+  if [[ -n "$ZSH_AUTOSUGGEST_BUFFER" ]]; then
+    zle autosuggest-accept
+  else
+    zle up-line-or-search
+  fi
+}
+zle -N smart-up-line-or-autosuggest
+bindkey '^[[A' smart-up-line-or-autosuggest
+### Make sure incremental search works
+bindkey '^[[A' up-line-or-search
+bindkey '^[[B' down-line-or-search
 
 ## ALL EVAL AND EXPORTS FROM PACKAGES
 eval "$(starship init zsh)"
