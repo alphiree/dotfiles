@@ -2,13 +2,18 @@ return {
 	"nvim-lualine/lualine.nvim",
 	dependencies = { "nvim-tree/nvim-web-devicons" },
 	config = function()
+		-- Add the below command if you want to force the lua line to have a bg transparent
+		vim.cmd([[
+            highlight StatusLine     guibg=NONE ctermbg=NONE
+            highlight StatusLineNC   guibg=NONE ctermbg=NONE
+          ]])
 		local auto_theme_custom = require("lualine.themes.monokai-pro")
+		-- local auto_theme_custom = require("lualine.themes.gruvbox-material")
 		auto_theme_custom.normal.c.bg = "none"
 		require("lualine").setup({
 			options = {
 				-- theme = "catppuccin",
 				theme = auto_theme_custom,
-				-- ... the rest of your lualine config
 			},
 			sections = {
 				lualine_a = {
@@ -28,7 +33,7 @@ return {
 						end,
 					},
 					"branch",
-					"diff",
+					-- "diff",
 					"diagnostics",
 				},
 				lualine_c = {
