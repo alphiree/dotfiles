@@ -41,7 +41,6 @@ function smart-up-line-or-autosuggest() {
 zle -N smart-up-line-or-autosuggest
 bindkey '^[[A' smart-up-line-or-autosuggest
 ### Make sure incremental search works
-bindkey '^[[A' up-line-or-search
 bindkey '^[[B' down-line-or-search
 
 ## ALL EVAL AND EXPORTS FROM PACKAGES
