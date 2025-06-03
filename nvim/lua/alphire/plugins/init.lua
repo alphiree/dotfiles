@@ -6,7 +6,7 @@ return {
 	-- To fix the delete buffer issue redirecting to nvimtree
 	"famiu/bufdelete.nvim",
 	-- Github CoPilot
-	"github/copilot.vim",
+	-- "github/copilot.vim",
 	-- Use auto-close plugin
 	{
 		"windwp/nvim-autopairs",
