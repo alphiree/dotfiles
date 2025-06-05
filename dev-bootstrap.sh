@@ -304,6 +304,17 @@ setup_python() {
         echo_step "pyenv already installed, skipping"
     fi
     
+    # Install pyenv-virtualenv
+    echo_step "Installing pyenv-virtualenv"
+    if [ ! -d ~/workflow-packages/.pyenv/plugins/pyenv-virtualenv ]; then
+        git clone https://github.com/pyenv/pyenv-virtualenv.git ~/workflow-packages/.pyenv/plugins/pyenv-virtualenv
+        # Configure shell for pyenv-virtualenv
+        echo_step "Configuring pyenv-virtualenv in $SHELL_RC"
+        echo -e 'eval "$(pyenv virtualenv-init -)"' >> $SHELL_RC
+    else
+        echo_step "pyenv-virtualenv already installed, skipping"
+    fi
+    
     # Install poetry
     if command -v poetry &> /dev/null; then
         echo_step "poetry already installed, skipping"
