@@ -1,4 +1,4 @@
-vim.g.python3_host_prog = "/Users/ryan/.pyenv/versions/neovim/bin/python"
+vim.g.python3_host_prog = "~/workflow-packages/.pyenv/versions/neovim/bin/python"
 
 -- To load python files faster using pyenv-virtualenvs:
 -- pyenv virtualenv 3.10.7 neovim
