@@ -16,14 +16,14 @@ endif
 
 core:
 	@for pkg in git make curl wget unzip go npm ripgrep fd fzf; do \
-		if ! brew list --formula | grep -q $$pkg; then \
+		if ! brew list --formula | grep -Fxq "$$pkg"; then \
 			echo "Installing $$pkg..."; brew install $$pkg; \
 		else echo "$$pkg already installed."; fi; \
 	done
 
 terminal:
 	@for pkg in starship zoxide lazygit; do \
-		if ! brew list --formula | grep -q $$pkg; then \
+		if ! brew list --formula | grep -Fxq "$$pkg"; then \
 			echo "Installing $$pkg..."; brew install $$pkg; \
 		else echo "$$pkg already installed."; fi; \
 	done
@@ -35,14 +35,14 @@ terminal:
 
 python:
 	@for pkg in python3 pyenv pyenv-virtualenv uv; do \
-		if ! brew list --formula | grep -q $$pkg; then \
+		if ! brew list --formula | grep -Fxq "$$pkg"; then \
 			echo "Installing $$pkg..."; brew install $$pkg; \
 		else echo "$$pkg already installed."; fi; \
 	done
 
 neovim:
 	@for pkg in neovim lua luarocks; do \
-		if ! brew list --formula | grep -q $$pkg; then \
+		if ! brew list --formula | grep -Fxq "$$pkg"; then \
 			echo "Installing $$pkg..."; brew install $$pkg; \
 		else echo "$$pkg already installed."; fi; \
 	done
