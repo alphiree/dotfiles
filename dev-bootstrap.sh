@@ -200,15 +200,6 @@ install_neovim() {
     else
         install_package "neovim"
     fi
-
-    if command -v magick &> /dev/null; then
-        echo_step "magick already installed, skipping"
-    else
-        echo_header "Installing Luarocks, Lua51, and magick to support image preview inside nvim"
-        install_package "luarocks"
-        install_package "lua51"
-        luarocks install magick --lua-version=5.1
-    fi
 }
 
 install_terminal_tools() {
@@ -290,44 +281,18 @@ setup_python() {
 
     # Install Python3
     install_package "python3"
-
-    # Install pyenv
-    echo_step "Installing pyenv"
-    mkdir -p ~/workflow-packages/
-    if [ ! -d ~/workflow-packages/.pyenv ]; then
-        git clone https://github.com/pyenv/pyenv.git ~/workflow-packages/.pyenv
-        # Configure shell for pyenv
-        echo_step "Configuring pyenv in $SHELL_RC"
-        echo -e 'export PYENV_ROOT="$HOME/workflow-packages/.pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"' >> $SHELL_RC
-        echo -e 'eval "$(pyenv init --path)"\neval "$(pyenv init -)"' >> $SHELL_RC
-    else
-        echo_step "pyenv already installed, skipping"
-    fi
     
-    # Install pyenv-virtualenv
-    echo_step "Installing pyenv-virtualenv"
-    if [ ! -d ~/workflow-packages/.pyenv/plugins/pyenv-virtualenv ]; then
-        git clone https://github.com/pyenv/pyenv-virtualenv.git ~/workflow-packages/.pyenv/plugins/pyenv-virtualenv
-        # Configure shell for pyenv-virtualenv
-        echo_step "Configuring pyenv-virtualenv in $SHELL_RC"
-        echo -e 'eval "$(pyenv virtualenv-init -)"' >> $SHELL_RC
+    # Install uv
+    if command -v uv &> /dev/null; then
+        echo_step "uv already installed, skipping"
     else
-        echo_step "pyenv-virtualenv already installed, skipping"
-    fi
-    
-    # Install poetry
-    if command -v poetry &> /dev/null; then
-        echo_step "poetry already installed, skipping"
-    else
-        echo_step "Installing Poetry"
-        curl -sSL https://install.python-poetry.org | python3 -
+        echo_step "Installing uv"
+        curl -LsSf https://astral.sh/uv/install.sh | sh
         if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' "$SHELL_RC"; then
             # Add the command to rc file if it's not already present
             echo -e 'export PATH="$HOME/.local/bin:$PATH"' >> $SHELL_RC
         fi
-        poetry config virtualenvs.in-project true
     fi
-     
 }
 
 install_lazygit() {
