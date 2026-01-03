@@ -133,6 +133,7 @@ setup_docker() {
             # Need to test this manually yet
     else
         install_package "docker"
+        sudo usermod -aG docker $USER
     fi
 }
 
