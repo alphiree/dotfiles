@@ -46,12 +46,8 @@ bindkey '^[[B' down-line-or-search
 ## ALL EVAL AND EXPORTS FROM PACKAGES
 eval "$(starship init zsh)"
 export STARSHIP_CONFIG=~/.config/starship/starship.toml
-export PYENV_ROOT="$HOME/workflow-packages/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init --path)"
-eval "$(pyenv init -)"
+
 if [ -n "$DISPLAY" ]; then xset r rate 300 25; fi
 export PATH="$PATH:$HOME/.local/scripts"
 export PATH="$HOME/.local/bin:$PATH"
 eval "$(zoxide init zsh)"
-eval "$(pyenv virtualenv-init -)"
