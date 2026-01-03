@@ -214,18 +214,19 @@ configure_keyboard() {
     
     # Fallback with xmodmap
     else
-        cat > ~/.Xmodmap << 'EOF'
-            clear lock
-            keycode 9 = Caps_Lock NoSymbol Caps_Lock
-            keycode 66 = Escape NoSymbol Escape
-        EOF
-        append_if_missing "Xmodmap" \
-            'if [ -f ~/.Xmodmap ] && [ -n "$DISPLAY" ]; then xmodmap ~/.Xmodmap; fi' \
-            "$SHELL_RC" true
-        
-        [ -n "$DISPLAY" ] && xmodmap ~/.Xmodmap 2>/dev/null || true
+        cat > ~/.Xmodmap <<'EOF'
+clear lock
+keycode 9 = Caps_Lock NoSymbol Caps_Lock
+keycode 66 = Escape NoSymbol Escape
+EOF
+
+    append_if_missing "Xmodmap" \
+        'if [ -f ~/.Xmodmap ] && [ -n "$DISPLAY" ]; then xmodmap ~/.Xmodmap; fi' \
+        "$SHELL_RC" true
+
+    [ -n "$DISPLAY" ] && xmodmap ~/.Xmodmap 2>/dev/null || true
     fi
-    
+
     # Set keyboard repeat rate
     echo_step "Setting keyboard repeat rate (300ms delay, 25 repeats/sec)"
     
