@@ -123,6 +123,19 @@ setup_python() {
         'export PATH="$HOME/.local/bin:$PATH"' "$SHELL_RC"
 }
 
+setup_docker() {
+    echo_header "Setting up Docker"
+
+    if [ "$PKG_MANAGER" = "apt" ]; then
+        install_if_missing \
+            "docker" \
+            "command -v docker" \
+            # Need to test this manually yet
+    else
+        install_package "docker"
+    fi
+}
+
 install_lazygit() {
     echo_header "Installing LazyGit"
     
@@ -305,6 +318,7 @@ main() {
     install_zoxide
     setup_tmux
     setup_python
+    setup_docker
     install_lazygit
     
     # Configure system
