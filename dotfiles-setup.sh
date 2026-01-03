@@ -125,6 +125,27 @@ for module in "${MODULES_TO_LINK[@]}"; do
     
     # Check if special handling is needed for this module
     case "$module" in
+        # # For neovim config
+        # nvim|neovim)
+        #     create_symlink "$module_dir" "$CONFIG_DIR/nvim"
+        #     ;;
+        # # For tmux config
+        # tmux)
+        #     create_symlink "$module_dir" "$CONFIG_DIR/tmux"
+        #     ;;
+        # # For shell configs
+        # bash)
+        #     create_symlink "$module_dir/bashrc" "$HOME/.bashrc"
+        #     create_symlink "$module_dir/bash_profile" "$HOME/.bash_profile"
+        #     ;;
+        # zsh)
+        #     create_symlink "$module_dir/zshrc" "$HOME/.zshrc"
+        #     create_symlink "$module_dir/zprofile" "$HOME/.zprofile"
+        #     ;;
+        # # For starship prompt
+        # starship)
+        #     create_symlink "$module_dir/starship.toml" "$CONFIG_DIR/starship/starship.toml"
+        #     ;;
         # Default behavior - link to ~/.config/module
         *)
             create_symlink "$module_dir" "$CONFIG_DIR/$module"
