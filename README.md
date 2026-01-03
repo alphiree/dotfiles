@@ -37,6 +37,6 @@ After doing this, log out and log back in (if this doesn't work try rebooting) t
 3. Run the bootstrap script to install all the packages and tools
 
 ```
-chmod +x ~/.config/dev-bootstrap.sh
-~/.config/dev-bootstrap.sh
+chmod +x ~/dotfiles/dev-bootstrap.sh
+~/dotfiles/dev-bootstrap.sh
 ```
