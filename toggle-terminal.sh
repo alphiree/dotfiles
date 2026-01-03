@@ -19,7 +19,7 @@ toggle_wayland() {
     # Requires: kdotool
     # Find one Kitty window
     local win
-    win=$(kdotool search --class "$TERM_CLASS" --limit 1 | head -n1)
+    win=$(kdotool search --class "$TERM_CLASS" | head -n1)
 
     if [[ -n "$win" ]]; then
         # If it's focused, minimize; else, activate (which also restores + focuses)
