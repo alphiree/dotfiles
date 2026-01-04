@@ -43,12 +43,13 @@ bindkey '^[[A' smart-up-line-or-autosuggest
 ### Make sure incremental search works
 bindkey '^[[B' down-line-or-search
 
+export PATH="$PATH:$HOME/.local/scripts"
+export PATH="$HOME/.local/bin:$PATH"
+export STARSHIP_CONFIG=~/.config/starship/starship.toml
+
 ## ALL EVAL AND EXPORTS FROM PACKAGES
 eval "$(starship init zsh)"
-export STARSHIP_CONFIG=~/.config/starship/starship.toml
 eval "$(zoxide init zsh)"
 
 if [ -n "$DISPLAY" ]; then xset r rate 300 25; fi
 
-export PATH="$PATH:$HOME/.local/scripts"
-export PATH="$HOME/.local/bin:$PATH"
