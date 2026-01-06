@@ -133,6 +133,7 @@ setup_docker() {
             # Need to test this manually yet
     else
         install_package "docker"
+        sudo systemctl enable docker # make sure docker is running everytime system starts
         sudo usermod -aG docker $USER
     fi
 }
