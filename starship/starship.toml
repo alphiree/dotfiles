@@ -67,7 +67,7 @@ style = 'bold #a9dc76'
 format = 'via [🐋 $context](blue bold) '
 
 [lua]
-format = 'via [ $version]($style)'
+format = 'via [ $version]($style) '
 style = 'bold #a9dc76'
 
 
