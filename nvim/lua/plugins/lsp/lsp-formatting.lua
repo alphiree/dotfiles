@@ -11,7 +11,6 @@ return {
 				typescript = { "prettier" },
 				javascriptreact = { "prettier" },
 				typescriptreact = { "prettier" },
-				svelte = { "prettier" },
 				css = { "prettier" },
 				html = { "prettier" },
 				json = { "prettier" },
@@ -19,10 +18,14 @@ return {
 				markdown = { "prettier" },
 				graphql = { "prettier" },
 				lua = { "stylua" },
-				python = { "isort", "black" },
+				python = {
+					-- "ruff_fix", -- uncommenting this because it removes some line flagged by ruff
+					"ruff_format",
+					"ruff_organize_imports",
+				},
 			},
 			format_on_save = {
-				lsp_fallback = true,
+				lsp_format = "fallback",
 				async = false,
 				timeout_ms = 1000,
 			},
@@ -30,7 +33,7 @@ return {
 
 		vim.keymap.set({ "n", "v" }, "<leader>mp", function()
 			conform.format({
-				lsp_fallback = true,
+				lsp_format = "fallback",
 				async = false,
 				timeout_ms = 500,
 			})
