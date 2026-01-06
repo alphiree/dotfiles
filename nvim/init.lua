@@ -13,6 +13,8 @@ vim.g.loaded_ruby_provider = 0
 vim.g.loaded_perl_provider = 0
 vim.g.loaded_node_provider = 0
 
-require("alphire.core.keymaps")
-require("alphire.core.options")
-require("alphire.lazy")
+require("core.keymaps")
+require("core.options")
+require("core.autocmd")
+require(".lsp")
+require(".lazy")
