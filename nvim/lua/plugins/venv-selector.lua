@@ -25,10 +25,8 @@ return {
 	},
 	search = {
 		workspace = {
-			command = "fd /bin/python$ $WORKSPACE_PATH --full-path --color never -E /proc -unrestricted",
-		},
-		uv_script = {
-			command = "uv python find --script '$CURRENT_FILE'",
+			-- command = "fd /bin/python$ $WORKSPACE_PATH --full-path --color never -E /proc -unrestricted",
+			command = "fd '/bin/python$' $CWD --full-path -H -I",
 		},
 	},
 }
