@@ -7,7 +7,7 @@ return {
 
 		-- This is where you configure your linters that you installed via Mason
 		lint.linters_by_ft = {
-			python = { "mypy" }, -- only mypy as ruff is already configured as lsp
+			-- python = { "mypy" }, -- only mypy as ruff is already configured as lsp
 			sql = { "sqlfluff" },
 		}
 

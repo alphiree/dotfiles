@@ -40,7 +40,7 @@ return {
 				"prettier",
 				-- "eslint_d", -- js
 				"sqlfluff", -- sql
-				"mypy",
+				-- "mypy",
 			},
 			auto_update = false,
 		})
