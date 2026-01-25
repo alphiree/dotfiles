@@ -32,6 +32,7 @@ return {
 				"marksman", -- markdown
 			},
 			automatic_installation = true,
+			auto_update = false,
 		})
 
 		mason_tool_installer.setup({
@@ -42,6 +43,7 @@ return {
 				"sqlfluff", -- sql
 				-- "mypy",
 			},
+			automatic_installation = true,
 			auto_update = false,
 		})
 	end,
