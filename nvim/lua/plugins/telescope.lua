@@ -34,14 +34,20 @@ return {
 					},
 				},
 				file_ignore_patterns = {
-					".git/.*",
-					".cache",
-					".venv/.*",
-					"venv/.*",
+					-- ".git/.*",
+					-- ".cache",
+					-- ".venv/.*",
+					-- "venv/.*",
 				},
 			},
 			pickers = {
 				find_files = {
+					file_ignore_patterns = {
+						".git/.*",
+						".cache",
+						".venv/.*",
+						"venv/.*",
+					},
 					find_command = {
 						"fd",
 						"--type",
