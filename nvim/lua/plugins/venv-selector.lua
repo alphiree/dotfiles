@@ -2,31 +2,35 @@ return {
 	"linux-cultist/venv-selector.nvim",
 	dependencies = {
 		"neovim/nvim-lspconfig",
-		{ "nvim-telescope/telescope.nvim" },
 	},
-	config = function()
-		require("venv-selector").setup({
-			-- Your options go here
-			name = { "venv", ".venv" },
-			-- auto_refresh = true,
-			path = 0,
-			stay_on_this_version = true,
-		})
-	end,
-	ft = "python",
-	event = "VeryLazy", -- Optional: needed only if you want to type `:VenvSelect` without a keymapping
+	ft = "python", -- Load when opening Python files
 	keys = {
-		-- Keymap to open VenvSelector to pick a venv.
 		{ "<leader>vs", "<cmd>VenvSelect<cr>" },
-		-- Keymap to retrieve the venv from a cache (the one previously used for the same project directory).
-		{ "<leader>vc", "<cmd>VenvSelectCached<cr>" },
-		-- Keymap to view your current venv.
-		{ "<leader>va", "<cmd>VenvSelectCurrent<cr>" },
 	},
-	search = {
-		workspace = {
-			-- command = "fd /bin/python$ $WORKSPACE_PATH --full-path --color never -E /proc -unrestricted",
-			command = "fd '/bin/python$' $CWD --full-path -H -I",
+	opts = {
+		search = {
+			-- workspace = {
+			-- 	command = "fd /bin/python$ $CWD --full-path -H -I",
+			-- },
+		},
+		options = {
+			notify_user_on_venv_activation = true,
+			statusline_func = {
+				lualine = function()
+					local venv_path = require("venv-selector").venv()
+					if not venv_path or venv_path == "" then
+						return ""
+					end
+
+					local venv_name = vim.fn.fnamemodify(venv_path, ":t")
+					if not venv_name then
+						return ""
+					end
+
+					local output = "🐍 " .. venv_name .. " " -- Changes only the icon but you can change colors or use powerline symbols here.
+					return output
+				end,
+			},
 		},
 	},
 }
