@@ -39,6 +39,12 @@ return {
 				lualine_c = {
 					{ "filename", path = 1 },
 				},
+				lualine_x = {
+					"venv-selector",
+					"encoding",
+					"fileformat",
+					"filetype",
+				},
 			},
 		})
 	end,
