@@ -30,6 +30,7 @@ return {
 				"gopls",
 				"ruff",
 				"marksman", -- markdown
+				"sqlls", -- adding this so lsp will attach to sql files
 			},
 			automatic_installation = true,
 			auto_update = false,
