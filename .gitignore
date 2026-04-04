@@ -17,3 +17,4 @@ tmux/tpm_plugin/
 zsh/plugins/
 
 lazygit/state.yml
+nvim/lua/core/local.lua
