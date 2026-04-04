@@ -12,8 +12,14 @@ keymap.set("n", "<leader>ef", function()
 	require("oil").open_float()
 end, { desc = "Open floating file explorer" })
 
--- Buffer delete plugin
-keymap.set("n", "<leader>x", ":Bdelete<CR>", { desc = "Delete current buffer" })
+-- Buffer delete (uses bufdelete if installed, falls back to built-in bdelete)
+keymap.set("n", "<leader>x", function()
+	if vim.fn.exists(":Bdelete") == 2 then
+		vim.cmd("Bdelete")
+	else
+		vim.cmd("bdelete")
+	end
+end, { desc = "Delete current buffer" })
 
 -- Plugin dashboards
 keymap.set("n", "<leader>ll", "<cmd>Lazy<CR>", { desc = "Lazy plugin manager" })
