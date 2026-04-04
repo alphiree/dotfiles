@@ -1,0 +1,31 @@
+name: nvim-practice-check
+
+on:
+  push:
+    paths:
+      - "nvim/**"
+      - ".github/workflows/nvim-practice-check.yml"
+  pull_request:
+    paths:
+      - "nvim/**"
+      - ".github/workflows/nvim-practice-check.yml"
+
+jobs:
+  nvim-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Stylua check
+        uses: JohnnyMorganz/stylua-action@v4
+        with:
+          version: latest
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --check nvim/lua
+
+      - name: Install Neovim
+        run: sudo apt-get update && sudo apt-get install -y neovim
+
+      - name: Headless startup check
+        run: XDG_CONFIG_HOME="$PWD" nvim --headless "+qa"
