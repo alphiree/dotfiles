@@ -1,4 +1,3 @@
 return {
-	-- To fix the delete buffer issue redirecting to nvimtree
-	"famiu/bufdelete.nvim",
+	-- Keep this module empty so archived plugins are never loaded by default.
 }

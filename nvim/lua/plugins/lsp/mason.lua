@@ -22,7 +22,6 @@ return {
 
 		mason_lspconfig.setup({
 			ensure_installed = {
-				"stylua", -- lua lsp and formatter
 				"lua_ls",
 				"prismals",
 				"basedpyright",
@@ -39,6 +38,7 @@ return {
 		mason_tool_installer.setup({
 			ensure_installed = { -- tools that cannot be installed in mason_lspconfig
 				-- formatters and linters
+				"stylua",
 				"prettier",
 				-- "eslint_d", -- js
 				"sqlfluff", -- sql
