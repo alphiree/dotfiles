@@ -56,7 +56,8 @@ local severity = vim.diagnostic.severity
 
 vim.diagnostic.config({
 	virtual_lines = false,
-	virtual_text = {
+	virtual_text = false and {
+		virt_text_hide = true,
 		source = true, -- Show the source of the diagnostic always
 	},
 	float = {
