@@ -79,3 +79,7 @@ GitHub Actions runs:
 
 - `stylua --check nvim/lua`
 - headless startup validation with `nvim --headless "+qa"`
+
+## Changelog
+
+- See `nvim/CHANGELOG.md` for a running record of config changes.
