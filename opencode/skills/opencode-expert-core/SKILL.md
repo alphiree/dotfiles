@@ -4,12 +4,13 @@ description: Unified OpenCode configuration reference, competency model, workflo
 compatibility: opencode
 metadata:
   audience: opencode-expert-agents
-  updated: 2026-04-04
+  updated: 2026-04-05
 references:
   - docs-reference
   - agent-competencies
   - config-playbook
   - local-repo-map
+  - verification-protocol
 ---
 
 ## Purpose
@@ -22,6 +23,7 @@ This consolidated skill replaces separate loading of these modules:
 - agent competency framework
 - config playbook
 - local repository map
+- verification protocol
 
 ## Core modules (always load)
 
@@ -32,6 +34,8 @@ This consolidated skill replaces separate loading of these modules:
 @config-playbook.md
 
 @local-repo-map.md
+
+@verification-protocol.md
 
 ## Practical defaults
 
