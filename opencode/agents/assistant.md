@@ -1,8 +1,9 @@
 ---
-name: helpful-assistant
+name: assistant
 description: Chat-only assistant for lightweight Q&A with minimal token usage.
 mode: primary
-model: llama.cpp/qwen3.5:9b
+variant: default
+model: openai/gpt-5.4-mini
 temperature: 0.2
 steps: 5
 color: success
