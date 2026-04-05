@@ -6,7 +6,11 @@ alias vv='nvim .'
 
 alias cls='clear'
 
-alias ls='ls -Glash --color'
+if ls --color=auto -d . >/dev/null 2>&1; then
+  alias ls='ls -lah --color=auto'
+else
+  alias ls='ls -Glah'
+fi
 
 alias pylatest='pyenv install --list | grep --extended-regexp "^\s*[0-9][0-9.]*[0-9]\s*$" | tail -1'
 
@@ -14,7 +18,7 @@ alias gitlog="git log --graph --abbrev-commit --decorate --format=format:'%C(yel
 
 alias gitmain='git log origin main --oneline'
 
-alias zshrc='nvim ~/.zshrc'
+alias zshrc='nvim ~/.config/zsh/.zshrc'
 
 alias gs='git status'
 
@@ -32,7 +36,7 @@ alias opd='xdg-open .'
 
 alias obs='exec /usr/bin/flatpak run --branch=stable --arch=x86_64 md.obsidian.Obsidian & disown'
 
-alias cursor='/home/alphire/appimage_bin/cursor . & disown'
+alias cursor='$HOME/appimage_bin/cursor . & disown'
 
 gitshowlog() {
   git log --all --oneline --color --format="%H %ad %an %s" --date=short | \

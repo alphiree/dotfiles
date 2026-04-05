@@ -1,10 +1,43 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/bootstrap-utils.sh"
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+BOOTSTRAP_NON_INTERACTIVE="${BOOTSTRAP_NON_INTERACTIVE:-false}"
+
+usage() {
+    cat <<'EOF'
+Usage: dev-bootstrap.sh [options]
+
+Options:
+  --yes, --non-interactive  Run without interactive prompts
+  -h, --help                Show this help message
+EOF
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --yes|--non-interactive)
+                BOOTSTRAP_NON_INTERACTIVE=true
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                echo_error "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    export BOOTSTRAP_NON_INTERACTIVE
+}
 
 CORE_PACKAGES=(
     git
@@ -130,11 +163,18 @@ setup_docker() {
         install_if_missing \
             "docker" \
             "command -v docker" \
-            # Need to test this manually yet
+            "sudo apt install -y docker.io docker-compose-plugin"
     else
         install_package "docker"
-        sudo systemctl enable docker # make sure docker is running everytime system starts
-        sudo usermod -aG docker $USER
+    fi
+
+    if command -v systemctl >/dev/null 2>&1; then
+        sudo systemctl enable --now docker >/dev/null 2>&1 || true
+    fi
+
+    if ! groups "$USER" | grep -qw docker; then
+        sudo usermod -aG docker "$USER"
+        echo_step "Added $USER to docker group (log out/in required)"
     fi
 }
 
@@ -300,6 +340,8 @@ show_summary() {
 
 main() {
     echo_header "🚀 Starting system setup"
+
+    parse_args "$@"
     
     detect_shell
     detect_package_manager

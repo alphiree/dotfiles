@@ -1,9 +1,57 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
+
+NON_INTERACTIVE=false
+CHANGE_DEFAULT_SHELL=true
+
+usage() {
+    cat <<'EOF'
+Usage: setup-zsh.sh [options]
+
+Options:
+  --yes, --non-interactive  Run without prompts
+  --no-chsh                 Do not change default shell
+  -h, --help                Show this help message
+EOF
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --yes|--non-interactive)
+                NON_INTERACTIVE=true
+                ;;
+            --no-chsh)
+                CHANGE_DEFAULT_SHELL=false
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                echo_error "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
 
 # ========= Helper Functions =========
 echo_step() { echo -e "\033[1;32m-->\033[0m $1"; }
 echo_error() { echo -e "\033[1;31mERROR:\033[0m $1"; }
+
+append_if_missing() {
+    local line="$1"
+    local file="$2"
+    touch "$file"
+    if ! grep -qF "$line" "$file" 2>/dev/null; then
+        printf '%s\n' "$line" >> "$file"
+    fi
+}
+
+parse_args "$@"
 
 # ========= Detect Package Manager =========
 OS="$(uname -s)"
@@ -38,6 +86,11 @@ fi
 
 echo_step "Detected package manager: $PKG_MANAGER"
 
+if [[ "$PKG_MANAGER" == "brew" ]] && ! command -v brew >/dev/null 2>&1; then
+    echo_error "Homebrew is required on macOS. Install it first: https://brew.sh"
+    exit 1
+fi
+
 # ========= Install ZSH =========
 if ! command -v zsh >/dev/null 2>&1; then
     echo_step "Installing ZSH..."
@@ -50,27 +103,29 @@ fi
 echo_step "Setting up ZSH configuration..."
 mkdir -p "$HOME/.config/zsh"
 
-# Create ~/.zshenv
-cat > "$HOME/.zshenv" <<'EOF'
-# Set ZDOTDIR to use config in ~/.config/zsh
-export ZDOTDIR="$HOME/.config/zsh"
-EOF
-
-# Create ~/.zprofile
-cat > "$HOME/.zprofile" <<'EOF'
-# Set ZDOTDIR to use config in ~/.config/zsh
-export ZDOTDIR="$HOME/.config/zsh"
-EOF
+append_if_missing 'export ZDOTDIR="$HOME/.config/zsh"' "$HOME/.zshenv"
+append_if_missing 'export ZDOTDIR="$HOME/.config/zsh"' "$HOME/.zprofile"
 
 echo_step "ZSH configuration files created at ~/.config/zsh"
 
 # ========= Change Default Shell =========
 CURRENT_SHELL=$(basename "$SHELL")
-if [[ "$CURRENT_SHELL" != "zsh" ]]; then
+if [[ "$CHANGE_DEFAULT_SHELL" = false ]]; then
+    echo_step "Skipping default shell change (--no-chsh)"
+elif [[ "$CURRENT_SHELL" != "zsh" ]]; then
     ZSH_PATH=$(command -v zsh)
     if [[ -n "$ZSH_PATH" ]]; then
-        echo_step "Changing default shell to ZSH..."
-        sudo chsh -s "$ZSH_PATH" "$USER"
+        if [[ "$NON_INTERACTIVE" = true ]]; then
+            echo_step "Changing default shell to ZSH..."
+            chsh -s "$ZSH_PATH" "$USER" || echo_error "Could not change default shell automatically"
+        else
+            read -r -p "Change default shell to zsh now? (Y/n): " should_change
+            if [[ ! "$should_change" =~ ^[Nn]$ ]]; then
+                chsh -s "$ZSH_PATH" "$USER" || echo_error "Could not change default shell automatically"
+            else
+                echo_step "Skipped changing default shell"
+            fi
+        fi
     else
         echo_error "Unable to find zsh binary path."
     fi
@@ -82,4 +137,3 @@ fi
 echo_step "ZSH setup complete!"
 echo "Please log out and log back in for changes to take effect."
 echo "Your ZSH configuration will load from: ~/.config/zsh/.zshrc"
-

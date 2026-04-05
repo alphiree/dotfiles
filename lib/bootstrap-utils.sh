@@ -137,6 +137,8 @@ install_package() {
 ###################
 
 detect_shell() {
+    local non_interactive="${BOOTSTRAP_NON_INTERACTIVE:-false}"
+
     # Determine shell type
     if [ -n "$ZSH_VERSION" ]; then
         SHELL_TYPE="zsh"
@@ -145,9 +147,13 @@ detect_shell() {
     elif grep -q "$(whoami).*zsh" /etc/passwd 2>/dev/null; then
         SHELL_TYPE="zsh"
     elif command -v zsh >/dev/null 2>&1; then
-        echo_step "Found zsh installed but not running in zsh session"
-        read -p "Would you like to use zsh configuration? (Y/n): " use_zsh
-        [[ "$use_zsh" =~ ^[Nn]$ ]] && SHELL_TYPE="bash" || SHELL_TYPE="zsh"
+        if [ "$non_interactive" = "true" ]; then
+            SHELL_TYPE="zsh"
+        else
+            echo_step "Found zsh installed but not running in zsh session"
+            read -p "Would you like to use zsh configuration? (Y/n): " use_zsh
+            [[ "$use_zsh" =~ ^[Nn]$ ]] && SHELL_TYPE="bash" || SHELL_TYPE="zsh"
+        fi
     else
         SHELL_TYPE="bash"
     fi
@@ -174,16 +180,18 @@ detect_shell() {
     fi
     
     echo_step "Detected shell: $SHELL_TYPE (config: $SHELL_RC)"
-    
-    # Offer to change location
-    echo "Current shell config location: $SHELL_RC"
-    read -p "Use a different config location? (y/N): " change_rc
-    if [[ "$change_rc" =~ ^[Yy]$ ]]; then
-        read -p "Enter new config path: " new_rc
-        if [ -n "$new_rc" ]; then
-            mkdir -p "$(dirname "$new_rc")"
-            SHELL_RC="$new_rc"
-            echo_step "Using custom config: $SHELL_RC"
+
+    if [ "$non_interactive" != "true" ]; then
+        # Offer to change location
+        echo "Current shell config location: $SHELL_RC"
+        read -p "Use a different config location? (y/N): " change_rc
+        if [[ "$change_rc" =~ ^[Yy]$ ]]; then
+            read -p "Enter new config path: " new_rc
+            if [ -n "$new_rc" ]; then
+                mkdir -p "$(dirname "$new_rc")"
+                SHELL_RC="$new_rc"
+                echo_step "Using custom config: $SHELL_RC"
+            fi
         fi
     fi
     

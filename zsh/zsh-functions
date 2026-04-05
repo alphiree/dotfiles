@@ -4,12 +4,18 @@ function zsh_add_file() {
 }
 
 function zsh_add_plugin() {
-    PLUGIN_NAME=$(echo $1 | cut -d "/" -f 2)
-    if [ -d "$ZDOTDIR/plugins/$PLUGIN_NAME" ]; then 
+    local plugin_repo="$1"
+    local plugin_name="${plugin_repo##*/}"
+
+    if [ -d "$ZDOTDIR/plugins/$plugin_name" ]; then
         # For plugins
-        zsh_add_file "plugins/$PLUGIN_NAME/$PLUGIN_NAME.plugin.zsh" || \
-        zsh_add_file "plugins/$PLUGIN_NAME/$PLUGIN_NAME.zsh"
+        zsh_add_file "plugins/$plugin_name/$plugin_name.plugin.zsh" || \
+        zsh_add_file "plugins/$plugin_name/$plugin_name.zsh"
     else
-        git clone "https://github.com/$1.git" "$ZDOTDIR/plugins/$PLUGIN_NAME"
+        if command -v git >/dev/null 2>&1; then
+            git clone --depth 1 "https://github.com/$plugin_repo.git" "$ZDOTDIR/plugins/$plugin_name" >/dev/null 2>&1 || return 1
+            zsh_add_file "plugins/$plugin_name/$plugin_name.plugin.zsh" || \
+            zsh_add_file "plugins/$plugin_name/$plugin_name.zsh"
+        fi
     fi
 }

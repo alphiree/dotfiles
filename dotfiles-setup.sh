@@ -1,19 +1,46 @@
 #!/usr/bin/env bash
 
-set -e
+set -euo pipefail
 
 DOTFILES_REPO="https://github.com/alphiree/dotfiles.git"
-DOTFILES_DIR="$HOME/dotfiles"
-CONFIG_DIR="$HOME/.config"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+CONFIG_DIR="${CONFIG_DIR:-$HOME/.config}"
+INTERACTIVE=true
+CONFLICT_STRATEGY="backup"
+MODULES_ARG=""
+
+DEFAULT_MODULES=(
+    kitty
+    lazygit
+    nvim
+    opencode
+    starship
+    tmux
+    zsh
+)
 
 # ANSI color codes
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+BOLD='\033[1m'
+NC='\033[0m'
 
-# Helper functions
+usage() {
+    cat <<'EOF'
+Usage: dotfiles-setup.sh [options]
+
+Options:
+  --yes, --non-interactive   Run without prompts
+  --modules LIST             Comma-separated modules to link (example: zsh,nvim,tmux)
+  --overwrite                Overwrite existing targets when conflicts happen
+  --skip-existing            Skip existing targets when conflicts happen
+  --backup-existing          Backup existing targets when conflicts happen (default)
+  -h, --help                 Show this help message
+EOF
+}
+
 print_header() {
     echo -e "${BLUE}==>${NC} ${BOLD}$1${NC}"
 }
@@ -30,127 +57,186 @@ print_error() {
     echo -e "${RED}ERROR:${NC} $1"
 }
 
-# Check if dotfiles already exist
-if [ -d "$DOTFILES_DIR" ]; then
-    print_warning "Dotfiles directory already exists at $DOTFILES_DIR"
-    read -p "Update existing dotfiles? (y/N): " update_existing
-    if [[ "$update_existing" =~ ^[Yy]$ ]]; then
-        print_step "Updating dotfiles repository..."
-        cd "$DOTFILES_DIR"
-        git pull
-    else
-        print_step "Using existing dotfiles without updating"
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --yes|--non-interactive)
+                INTERACTIVE=false
+                ;;
+            --modules)
+                MODULES_ARG="${2:-}"
+                shift
+                ;;
+            --overwrite)
+                CONFLICT_STRATEGY="overwrite"
+                ;;
+            --skip-existing)
+                CONFLICT_STRATEGY="skip"
+                ;;
+            --backup-existing)
+                CONFLICT_STRATEGY="backup"
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
+handle_existing_target() {
+    local target="$1"
+
+    if [ "$INTERACTIVE" = true ]; then
+        read -r -p "Target exists ($target). (b)ackup, (o)verwrite, (s)kip: " action
+        case "$action" in
+            b|B) CONFLICT_STRATEGY="backup" ;;
+            o|O) CONFLICT_STRATEGY="overwrite" ;;
+            *) CONFLICT_STRATEGY="skip" ;;
+        esac
     fi
-else
-    print_step "Cloning dotfiles repository..."
-    git clone "$DOTFILES_REPO" "$DOTFILES_DIR"
-fi
 
-# Create ~/.config directory if it doesn't exist
-mkdir -p "$CONFIG_DIR"
+    case "$CONFLICT_STRATEGY" in
+        backup)
+            local backup="${target}.backup.$(date +%Y%m%d%H%M%S)"
+            print_step "Backing up $target to $backup"
+            mv "$target" "$backup"
+            ;;
+        overwrite)
+            print_step "Overwriting $target"
+            rm -rf "$target"
+            ;;
+        skip)
+            print_step "Skipping $target"
+            return 1
+            ;;
+        *)
+            print_error "Invalid conflict strategy: $CONFLICT_STRATEGY"
+            return 1
+            ;;
+    esac
 
-# Function to create symbolic links
+    return 0
+}
+
 create_symlink() {
     local source="$1"
     local target="$2"
-    
-    # Check if target already exists
-    if [ -e "$target" ]; then
+
+    if [ -e "$target" ] || [ -L "$target" ]; then
         if [ -L "$target" ]; then
-            # It's already a symlink
-            local current_link=$(readlink -f "$target")
+            local current_link
+            current_link="$(readlink "$target" || true)"
             if [ "$current_link" = "$source" ]; then
                 print_step "Link already exists: $target -> $source"
                 return 0
-            else
-                print_warning "Different symlink exists: $target -> $current_link"
             fi
+            print_warning "Different symlink exists: $target -> $current_link"
         else
-            # It's a regular file or directory
             print_warning "Target already exists and is not a symlink: $target"
         fi
-        
-        # Ask what to do with existing target
-        read -p "What would you like to do? (b)ackup, (o)verwrite, (s)kip: " action
-        case "$action" in
-            b|B)
-                local backup="${target}.backup.$(date +%Y%m%d%H%M%S)"
-                print_step "Backing up to $backup"
-                mv "$target" "$backup"
-                ;;
-            o|O)
-                print_step "Overwriting $target"
-                rm -rf "$target"
-                ;;
-            *)
-                print_step "Skipping $target"
-                return 0
-                ;;
-        esac
+
+        if ! handle_existing_target "$target"; then
+            return 0
+        fi
     fi
-    
-    # Create parent directory if needed
+
     mkdir -p "$(dirname "$target")"
-    
-    # Create the symlink
     ln -s "$source" "$target"
     print_step "Created symlink: $target -> $source"
 }
 
-# Available dotfile modules
-AVAILABLE_MODULES=$(find "$DOTFILES_DIR" -maxdepth 1 -type d ! -path "$DOTFILES_DIR" -exec basename {} \; | sort)
-MODULES_TO_LINK=()
+update_or_clone_repo() {
+    if [ -d "$DOTFILES_DIR/.git" ]; then
+        print_warning "Dotfiles directory already exists at $DOTFILES_DIR"
+        local should_update=false
 
-print_header "Available dotfile modules:"
-for module in $AVAILABLE_MODULES; do
-    echo "  - $module"
-done
-
-read -p "Link all modules? (Y/n): " link_all
-if [[ ! "$link_all" =~ ^[Nn]$ ]]; then
-    MODULES_TO_LINK=($AVAILABLE_MODULES)
-else
-    for module in $AVAILABLE_MODULES; do
-        read -p "Link $module? (y/N): " link_module
-        if [[ "$link_module" =~ ^[Yy]$ ]]; then
-            MODULES_TO_LINK+=("$module")
+        if [ "$INTERACTIVE" = true ]; then
+            read -r -p "Update existing dotfiles? (y/N): " update_existing
+            [[ "$update_existing" =~ ^[Yy]$ ]] && should_update=true
+        else
+            should_update=true
         fi
+
+        if [ "$should_update" = true ]; then
+            print_step "Updating dotfiles repository..."
+            if ! git -C "$DOTFILES_DIR" pull --ff-only; then
+                print_warning "Could not fast-forward dotfiles repo, continuing with current checkout"
+            fi
+        else
+            print_step "Using existing dotfiles without updating"
+        fi
+    elif [ -d "$DOTFILES_DIR" ]; then
+        print_warning "Directory exists but is not a git repository: $DOTFILES_DIR"
+        print_step "Using existing directory contents"
+    else
+        print_step "Cloning dotfiles repository..."
+        git clone "$DOTFILES_REPO" "$DOTFILES_DIR"
+    fi
+}
+
+resolve_modules() {
+    MODULES_TO_LINK=()
+
+    if [ -n "$MODULES_ARG" ]; then
+        local parsed
+        parsed="${MODULES_ARG//,/ }"
+        for module in $parsed; do
+            MODULES_TO_LINK+=("$module")
+        done
+    elif [ "$INTERACTIVE" = false ]; then
+        MODULES_TO_LINK=("${DEFAULT_MODULES[@]}")
+    else
+        print_header "Available dotfile modules:"
+        for module in "${DEFAULT_MODULES[@]}"; do
+            echo "  - $module"
+        done
+
+        read -r -p "Link all modules? (Y/n): " link_all
+        if [[ ! "$link_all" =~ ^[Nn]$ ]]; then
+            MODULES_TO_LINK=("${DEFAULT_MODULES[@]}")
+        else
+            for module in "${DEFAULT_MODULES[@]}"; do
+                read -r -p "Link $module? (y/N): " link_module
+                if [[ "$link_module" =~ ^[Yy]$ ]]; then
+                    MODULES_TO_LINK+=("$module")
+                fi
+            done
+        fi
+    fi
+}
+
+link_modules() {
+    print_header "Creating symlinks for dotfiles"
+
+    for module in "${MODULES_TO_LINK[@]}"; do
+        local module_dir="$DOTFILES_DIR/$module"
+        local target_dir="$CONFIG_DIR/$module"
+
+        if [ ! -d "$module_dir" ]; then
+            print_warning "Module not found, skipping: $module"
+            continue
+        fi
+
+        create_symlink "$module_dir" "$target_dir"
     done
-fi
+}
 
-# Create symlinks for selected modules
-print_header "Creating symlinks for dotfiles..."
-for module in "${MODULES_TO_LINK[@]}"; do
-    module_dir="$DOTFILES_DIR/$module"
-    
-    # Check if special handling is needed for this module
-    case "$module" in
-        # # For neovim config
-        # nvim|neovim)
-        #     create_symlink "$module_dir" "$CONFIG_DIR/nvim"
-        #     ;;
-        # # For tmux config
-        # tmux)
-        #     create_symlink "$module_dir" "$CONFIG_DIR/tmux"
-        #     ;;
-        # # For shell configs
-        # bash)
-        #     create_symlink "$module_dir/bashrc" "$HOME/.bashrc"
-        #     create_symlink "$module_dir/bash_profile" "$HOME/.bash_profile"
-        #     ;;
-        # zsh)
-        #     create_symlink "$module_dir/zshrc" "$HOME/.zshrc"
-        #     create_symlink "$module_dir/zprofile" "$HOME/.zprofile"
-        #     ;;
-        # # For starship prompt
-        # starship)
-        #     create_symlink "$module_dir/starship.toml" "$CONFIG_DIR/starship/starship.toml"
-        #     ;;
-        # Default behavior - link to ~/.config/module
-        *)
-            create_symlink "$module_dir" "$CONFIG_DIR/$module"
-            ;;
-    esac
-done
+main() {
+    parse_args "$@"
+    update_or_clone_repo
+    mkdir -p "$CONFIG_DIR"
+    resolve_modules
+    link_modules
 
-print_header "Dotfiles setup complete!"
+    print_header "Dotfiles setup complete"
+    print_step "Linked modules: ${MODULES_TO_LINK[*]}"
+}
+
+main "$@"
