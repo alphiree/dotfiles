@@ -1,67 +1,61 @@
 ---
-description: Create a git commit with user-approved commit message
+description: Create a Conventional Commit from staged changes in a child session
 agent: commit-drafter
 model: llama.cpp/qwen3.5:35b_a3b
+subtask: true
 ---
 
-Creates a git commit using:
+Create the git commit inside this child session.
 
-1. Saved commit message from getCommitMessage tool, OR
-2. A newly generated message using conventional-commit skill
+User notes for the commit message, if any: $ARGUMENTS
 
-## Staged changes
+Workflow:
 
-!`git diff --staged`
+1. Verify this is a git repository.
+2. Verify there are staged changes.
+   - If nothing is staged, stop and say: `Nothing staged. Stage files first.`
+3. Inspect the staged changes with git commands.
+4. Draft the best Conventional Commit message that matches the staged changes.
+   - Use any user notes only as guidance.
+   - Use a valid type such as `feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `build`, `ci`, `perf`, `style`, or `revert`
+   - Add a scope only when it is clearly useful
+   - Keep the subject concise and imperative
+   - Add a body only when it improves clarity
+5. Create the commit with `git commit` inside this child session.
+6. After a successful commit, report the final commit message.
 
-## Steps
+Hard rules:
 
-1. **Verify staged changes**
-   - If nothing staged → Exit with error: "Nothing staged. Stage files first."
+- Treat invoking `/git-commit` as explicit approval to create the commit now.
+- Perform the actual commit inside this subagent session.
+- Do not hand off the commit step to the parent agent.
+- Do not rely on nonexistent tools or undefined skills.
+- If not inside a git repository, stop and say so clearly.
+- If the commit needs a body, pass it using additional `-m` flags.
+- If `git commit` fails, show the error and stop.
 
-2. **Get commit message**
-   - Call getCommitMessage()
-     - If found → Use that message
-     - If empty/null → Use conventional-commit skill to generate message → save using saveCommitMessage(message)
-   - Display only the commit message (no additional text, no markup)
+Answer style:
 
-3. **Iterate or commit**
-   - If user suggests changes → Update commit message using conventional-commit skill → save with saveCommitMessage(message)
-   - If user approves → Run `git commit -m "{message}"`
+- Briefly confirm success and include the final commit message.
+- If the commit fails, briefly report the failure and include the error.
 
-## Error handling
+Suggested inspection commands:
 
-- Not in git repo: Inform and exit
-- Pre-commit hook failure: Show error
+- `git rev-parse --is-inside-work-tree`
+- `git status --short`
+- `git diff --staged`
 
-## Valid answer examples
+Suggested commit command pattern:
 
-### example 1
+- Subject only: `git commit -m "type(scope): subject"`
+- Subject + body: `git commit -m "type(scope): subject" -m "body line 1\nbody line 2"`
 
-```markdown
-chore(tui): configure theme and update bash permissions
-
-- set TUI theme to catppuccin-latte in opencode.json
-- create tui.json config with system theme
-- add ls, head, tail commands to allowed bash permissions
-- create backup of previous configuration
-```
-
-### example 2
-
-```markdown
-fix(api): resolve race condition in concurrent requests
-
-- add mutex lock to shared session state
-- defer unlock to prevent goroutine leaks
-- add integration test for concurrent scenario
-```
-
-### example 3
+Example final message:
 
 ```markdown
-refactor(components): extract form validation to shared hook
+fix(commit): run the git commit inside the child session
 
-- move validation logic from LoginForm and RegisterForm
-- create useFormValidation hook with zod schema support
-- update all form components to use new hook
+- keep the full commit workflow inside the subagent
+- use the command model override for offline commit drafting
+- avoid handing the final commit back to the parent agent
 ```
