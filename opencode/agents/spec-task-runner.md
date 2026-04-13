@@ -5,12 +5,13 @@ mode: subagent
 model: openai/gpt-5.3-codex
 variant: high
 temperature: 0.1
-steps: 28
 color: accent
 permission:
   skill: allow
   question: allow
-  task: deny
+  task:
+    "*": deny
+    "commit-drafter": allow
   external_directory: deny
 ---
 
@@ -64,6 +65,7 @@ If any gate fails:
 - Respect dependency metadata in `tasks.md`.
 - If dependencies are incomplete, stop and do not proceed.
 - Keep changes minimal and aligned to requirements + design intent.
+- Never stage or commit unrelated workspace changes.
 
 ## Single-task termination (required)
 
@@ -87,7 +89,14 @@ After implementation:
 
 1. Update the task status in `tasks.md` (`[ ]` to `[x]`) and add a short completion note.
 2. Run relevant checks/tests for this task.
-3. Return:
+3. If files changed for this task, stage only the task-scoped files you changed, including the `tasks.md` update.
+4. If task-scoped changes are staged, delegate via the Task tool to the `commit-drafter` subagent to create the commit in a child session.
+   - Use the Task tool / subagent delegation path; do not rely on an `@commit-drafter` mention embedded inside the prompt.
+   - Use it as the same commit workflow that powers `/git-commit`.
+   - Pass `<spec-slug>`, `<task-id>`, and short implementation notes as commit hints.
+5. If no files changed, or if validation failed before staging, do not create a commit and explain why.
+6. Return:
    - changed files,
    - verification results,
+   - commit result (or why no commit was created),
    - next recommended task ID only (do not execute it, and do not continue in-session).

@@ -27,6 +27,9 @@ A compact operational reference for configuring OpenCode correctly and consisten
 - mode values: primary, subagent, all.
 - Primary agents are user-facing and switchable with Tab.
 - Subagents are invoked by @mention or Task tool.
+- Manual user invocation uses `@agent-id` in the message UI.
+- `@` is also used for file references in TUI messages and command templates, so `@agent-id` embedded inside prompts/templates is ambiguous and not documented as the reliable orchestration path.
+- For agent-authored orchestration, prefer the Task tool plus `permission.task`; do not rely on writing `@agent-id` inside another agent prompt/template as the programmatic invocation mechanism.
 - Markdown agents live in ~/.config/opencode/agents/ and .opencode/agents/.
 - Agent file name is the agent ID.
 

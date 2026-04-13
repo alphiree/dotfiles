@@ -43,6 +43,8 @@ Workflow:
 5. Implement only that task scope.
 6. Update `tasks.md` for `<task-id>` status and completion notes.
 7. Run relevant checks/tests for that task.
-8. Stop immediately after completing `<task-id>`; do not begin any other task.
-9. Return: changed files, validation results, and next recommended task ID only (no auto-execution).
-10. If any follow-up asks to continue in the same session, refuse and repeat the explicit command required for the next task.
+8. If task-scoped files changed, stage only those files and delegate via the Task tool to the `commit-drafter` subagent, using the same commit workflow as `/git-commit`.
+   - Do not rely on writing `@commit-drafter` inside the workflow prompt to trigger the subagent.
+9. Stop immediately after completing `<task-id>`; do not begin any other task.
+10. Return: changed files, validation results, commit result, and next recommended task ID only (no auto-execution).
+11. If any follow-up asks to continue in the same session, refuse and repeat the explicit command required for the next task.
