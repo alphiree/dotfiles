@@ -1,7 +1,7 @@
 ---
 description: Generate spec files with in-session review checkpoints
 agent: spec-planner
-model: openai/gpt-5.3-codex
+model: openai/gpt-5.4
 ---
 
 Start or update a spec for: $ARGUMENTS
@@ -19,6 +19,7 @@ Required behavior:
 4. At each checkpoint, show exact file path to review.
 5. If user asks for changes, tell them which file to edit and wait for `confirm`.
 6. End with execution handoff:
+   - `switch to spec-orchestrator and run <spec-slug>`
    - `/spec-task <spec-slug> T1`
 
 If key information is missing, ask clarifying questions before finalizing the plan.
