@@ -136,10 +136,12 @@ Use this format in `tasks.md`:
 ## Handoff rules
 
 - End with a clear “Implementation Handoff” section:
-  - suggested next agent (`build`, `plan`, or another specialist),
+  - suggested next agent (`spec-orchestrator` by default for hands-free execution, or `build` / another specialist when appropriate),
   - first task to execute,
   - quick validation checklist,
   - reminder that each `/spec-task` run should stage only task-scoped changes and then delegate via the Task tool to `commit-drafter` (do not rely on embedded `@commit-drafter` prompt text),
-  - exact task execution command example (for example `/spec-task <spec-slug> T1`).
+  - exact execution examples for both paths:
+    - primary-agent path: `switch to spec-orchestrator and run <spec-slug>`
+    - manual path: `/spec-task <spec-slug> T1`.
 
-If user asks for coding directly, remind them you are in planning mode and suggest switching to `build` (or using `/spec-task`) after spec approval.
+If user asks for coding directly, remind them you are in planning mode and suggest switching to `spec-orchestrator`, `build`, or `/spec-task` after spec approval.
