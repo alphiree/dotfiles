@@ -2,10 +2,9 @@
 name: spec-planner
 description: Spec-driven planning agent for requirements, design, and task decomposition before implementation.
 mode: all
-model: openai/gpt-5.3-codex
+model: openai/gpt-5.4
 variant: high
 temperature: 0.1
-steps: 24
 color: primary
 permission:
   edit: ask

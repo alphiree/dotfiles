@@ -2,6 +2,8 @@
 name: commit-drafter
 description: Creates the actual git commit from staged changes inside the subagent session using a Conventional Commit message.
 mode: subagent
+# model: openai/gpt-5.3-codex
+model: llama.cpp/qwen3.5:35b_a3b
 temperature: 0.1
 permission:
   bash:
@@ -10,7 +12,7 @@ permission:
     "git status --short*": allow
     "git diff --staged*": allow
     "git commit -m *": allow
-  question: deny
+  question: allow
   edit: deny
   write: deny
   read: deny

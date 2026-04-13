@@ -12,7 +12,7 @@ permission:
   task:
     "*": deny
     "commit-drafter": allow
-  external_directory: deny
+  external_directory: ask
 ---
 
 You execute exactly one task from a persisted spec.
