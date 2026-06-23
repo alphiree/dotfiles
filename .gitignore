@@ -18,3 +18,19 @@ zsh/plugins/
 
 lazygit/state.yml
 nvim/lua/core/local.lua
+
+# Local/vendor scratch repos
+opencode/.git_repos/
+
+# Pi runtime/sensitive state (tracked config lives in pi/agent/)
+pi/agent/auth.json
+pi/agent/trust.json
+pi/agent/local-llms.json
+pi/agent/sessions/
+pi/agent/npm/
+pi/agent/git/
+pi/agent/local-llms/
+pi/agent/*.log
+pi/agent/**/*.log
+pi/agent/*.lock
+pi/agent/**/*.lock
