@@ -53,6 +53,7 @@ echo -e "${BLUE}==>${NC} Dotfiles doctor"
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 CONFIG_DIR="${CONFIG_DIR:-$HOME/.config}"
+PI_AGENT_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
 
 if [ -d "$DOTFILES_DIR/.git" ]; then
     pass "Dotfiles repository found at $DOTFILES_DIR"
@@ -62,6 +63,10 @@ fi
 
 for module in kitty lazygit nvim opencode starship tmux zsh; do
     check_symlink "$DOTFILES_DIR/$module" "$CONFIG_DIR/$module"
+done
+
+for pi_item in settings.json local-llms.json extensions themes; do
+    check_symlink "$DOTFILES_DIR/pi/agent/$pi_item" "$PI_AGENT_DIR/$pi_item"
 done
 
 if [ -f "$CONFIG_DIR/zsh/.zshrc" ]; then
@@ -82,7 +87,7 @@ for cmd in git nvim tmux; do
     fi
 done
 
-for optional_cmd in starship zoxide lazygit opencode; do
+for optional_cmd in starship zoxide lazygit opencode pi; do
     if command -v "$optional_cmd" >/dev/null 2>&1; then
         pass "Optional command available: $optional_cmd"
     else

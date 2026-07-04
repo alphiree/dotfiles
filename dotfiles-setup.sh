@@ -14,6 +14,7 @@ DEFAULT_MODULES=(
     lazygit
     nvim
     opencode
+    pi
     starship
     tmux
     zsh
@@ -212,10 +213,37 @@ resolve_modules() {
     fi
 }
 
+link_pi_module() {
+    local pi_agent_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+    local pi_source_dir="$DOTFILES_DIR/pi/agent"
+    local pi_items=(settings.json local-llms.json extensions themes)
+
+    if [ ! -d "$pi_source_dir" ]; then
+        print_warning "Pi config module not found, skipping: pi"
+        return 0
+    fi
+
+    mkdir -p "$pi_agent_dir"
+
+    for item in "${pi_items[@]}"; do
+        if [ ! -e "$pi_source_dir/$item" ]; then
+            print_warning "Pi config item not found, skipping: $item"
+            continue
+        fi
+
+        create_symlink "$pi_source_dir/$item" "$pi_agent_dir/$item"
+    done
+}
+
 link_modules() {
     print_header "Creating symlinks for dotfiles"
 
     for module in "${MODULES_TO_LINK[@]}"; do
+        if [ "$module" = "pi" ]; then
+            link_pi_module
+            continue
+        fi
+
         local module_dir="$DOTFILES_DIR/$module"
         local target_dir="$CONFIG_DIR/$module"
 
