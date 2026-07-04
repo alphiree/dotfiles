@@ -2,8 +2,6 @@
 
 ## BASIC CONFIG
 export ZDOTDIR="${ZDOTDIR:-$HOME/.config/zsh}"
-export VISUAL="${VISUAL:-nvim}"
-export EDITOR="${EDITOR:-nvim}"
 HISTSIZE=10000
 SAVEHIST=100000
 HISTFILE="$HOME/.zsh_history"
