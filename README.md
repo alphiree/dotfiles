@@ -66,7 +66,7 @@ GNU Stow was considered, but is intentionally deferred. The current layout alrea
 - `fd` - used by Telescope file search in Neovim
 - `ripgrep` / `rg` - used by Telescope live grep
 - `fzf` - used by `tmux-sessionizer`
-- `tree-sitter` - used by current Neovim Treesitter setup
+- `tree-sitter-cli` - provides the `tree-sitter` executable used by current Neovim Treesitter parser installs
 - `uv` - Python tooling and optional Neovim `pynvim` provider setup
 
 ## Notes

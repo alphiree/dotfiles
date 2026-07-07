@@ -15,7 +15,7 @@ else
 endif
 
 core:
-	@for pkg in git make curl wget unzip go npm ripgrep fd fzf; do \
+	@for pkg in git make curl wget unzip go npm ripgrep fd fzf tree-sitter-cli; do \
 		if ! brew list --formula | grep -Fxq "$$pkg"; then \
 			echo "Installing $$pkg..."; brew install $$pkg; \
 		else echo "$$pkg already installed."; fi; \

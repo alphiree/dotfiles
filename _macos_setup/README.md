@@ -36,7 +36,7 @@ or install manually:
 ```bash
 brew install git make curl wget unzip go npm \
   tmux neovim starship zoxide lazygit \
-  ripgrep fd fzf tree-sitter uv
+  ripgrep fd fzf tree-sitter-cli uv
 
 brew install --cask iterm2 font-jetbrains-mono-nerd-font
 ```
@@ -46,7 +46,7 @@ Notes:
 - `fd` is used by Telescope file search in Neovim.
 - `ripgrep`/`rg` is used by Telescope live grep.
 - `fzf` is used by `tmux-sessionizer`.
-- `tree-sitter` CLI is required by the current Neovim Treesitter setup.
+- `tree-sitter-cli` provides the `tree-sitter` executable required by the current Neovim Treesitter parser install/build step.
 - `uv` is used for Python tooling, including the optional Neovim Python provider.
 
 ## 5. Link configs

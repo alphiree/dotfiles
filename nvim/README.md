@@ -19,7 +19,7 @@ Personal Neovim configuration focused on Python, TypeScript/JavaScript, Go, SQL,
 - `git`
 - `fd` for Telescope file search
 - `ripgrep` for Telescope live grep
-- `tree-sitter` CLI `>= 0.26.1` for the current nvim-treesitter branch
+- `tree-sitter-cli` `>= 0.26.1` for the current nvim-treesitter branch. It must provide a `tree-sitter` executable on `PATH`.
 - Optional: `uv tool install pynvim` or `NVIM_PYTHON3_HOST_PROG` for Python provider support
 
 ## Install
