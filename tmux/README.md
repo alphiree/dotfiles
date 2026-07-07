@@ -69,3 +69,19 @@ The script uses only built-in OS facilities:
 
 - Linux: `/sys/class/power_supply`
 - macOS: `pmset`
+
+## Phone ChatGPT -> KDE Connect -> tmux
+
+PhoneGPT/KDE Connect workflow scripts live outside the tmux module in:
+
+```text
+../phonegpt/
+```
+
+The tmux module only keeps generic tmux helpers:
+
+- `scripts/paste-wayland-clipboard.sh` - one-shot paste of the current Wayland clipboard into the active tmux pane
+- `scripts/paste-stdin-to-active-pane.sh` - paste stdin into a tmux pane using `tmux load-buffer` + `tmux paste-buffer`
+- `prefix + v` - run the one-shot Wayland clipboard paste inside tmux
+
+See `../phonegpt/README.md` for the phone ChatGPT -> KDE Connect -> tmux workflow.
