@@ -19,19 +19,6 @@ function M.setup()
 		inc_search = "background",
 		background_clear = {
 			"telescope",
-			"lua-line",
-			"renamer",
-			"notify",
-		},
-		plugins = {
-			bufferline = {
-				underline_selected = false,
-				underline_visible = false,
-			},
-			indent_blankline = {
-				context_highlight = "default",
-				context_start_underline = false,
-			},
 		},
 	})
 	vim.cmd.colorscheme("monokai-pro")

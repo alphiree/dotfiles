@@ -26,17 +26,9 @@ function M.setup()
 		group = vim.api.nvim_create_augroup("UserMiniIndentscopeDisable", { clear = true }),
 		pattern = {
 			"help",
-			"alpha",
-			"dashboard",
-			"neo-tree",
-			"Trouble",
-			"trouble",
-			"lazy",
 			"mason",
-			"notify",
-			"toggleterm",
-			"lazyterm",
 			"oil",
+			"TelescopePrompt",
 		},
 		callback = function()
 			vim.b.miniindentscope_disable = true

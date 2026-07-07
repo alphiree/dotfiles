@@ -15,7 +15,7 @@ end, { desc = "Open floating file explorer" })
 -- Buffer delete
 keymap.set("n", "<leader>x", "<cmd>bdelete<CR>", { desc = "Delete current buffer" })
 
--- Plugin dashboards
+-- Tooling
 keymap.set("n", "<leader>mm", "<cmd>Mason<CR>", { desc = "Mason package manager" })
 
 -- Telescope
@@ -48,7 +48,7 @@ keymap.set("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Recent fi
 keymap.set("n", "<leader>fs", "<cmd>Telescope live_grep<cr>", { desc = "Find string in cwd" })
 keymap.set("n", "<leader>fc", "<cmd>Telescope grep_string<cr>", { desc = "Find word under cursor" })
 
--- Git (Gitsigns only; Lazygit is used from the terminal)
+-- Git
 keymap.set("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<cr>", { desc = "Preview hunk" })
 keymap.set("n", "<leader>gr", "<cmd>Gitsigns reset_hunk<cr>", { desc = "Reset hunk" })
 keymap.set("n", "<leader>ga", function()

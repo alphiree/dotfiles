@@ -50,7 +50,6 @@ vim.pack.add({
 	gh("mason-org/mason-lspconfig.nvim"),
 	gh("WhoIsSethDaniel/mason-tool-installer.nvim"),
 	gh("neovim/nvim-lspconfig"),
-	gh("folke/lazydev.nvim"),
 	gh("stevearc/conform.nvim"),
 	gh("mfussenegger/nvim-lint"),
 	gh("linux-cultist/venv-selector.nvim"),

@@ -6,8 +6,12 @@ local servers = {
 	lua_ls = {
 		settings = {
 			Lua = {
+				runtime = { version = "LuaJIT" },
 				diagnostics = { globals = { "vim" } },
-				workspace = { checkThirdParty = false },
+				workspace = {
+					checkThirdParty = false,
+					library = vim.api.nvim_get_runtime_file("", true),
+				},
 			},
 		},
 	},
@@ -155,7 +159,6 @@ local function setup_linting()
 end
 
 function M.setup()
-	require("lazydev").setup({})
 	setup_mason()
 	setup_servers()
 	setup_formatting()

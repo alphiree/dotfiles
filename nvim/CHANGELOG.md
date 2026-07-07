@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-07
+
+### Follow-up stale config cleanup
+
+- Removed leftover Lazygit wording from Neovim git keymap comments.
+- Removed stale special-buffer filetypes for plugins that are no longer installed from the mini.indentscope disable list.
+- Reduced Monokai Pro options to only active integrations instead of carrying copied options for removed plugins.
+- Removed `lazydev.nvim`; LuaLS now gets Neovim runtime/library paths directly from `lua_ls` settings.
+- Switched active `nvim` back to the system package after upgrading Arch `neovim` to `0.12.3-1`.
+
 ## 2026-07-06
 
 ### Neovim 0.12 native cleanup
