@@ -6,12 +6,12 @@
 
 filezilla/
 github-copilot/
-iterm2/
 
 ## Ignore specific files
 *.DS_Store
 
 ## Ignore specific folders
+_backups/
 tmux/plugins/
 tmux/tpm_plugin/
 zsh/plugins/
