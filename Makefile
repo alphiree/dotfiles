@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 UNAME_S := $(shell uname -s)
 
-DEFAULT_MODULES := kitty,lazygit,nvim,opencode,starship,tmux,zsh
+DEFAULT_MODULES := ghostty,lazygit,nvim,opencode,starship,tmux,zsh
 LINK_FLAGS ?= --yes --modules $(DEFAULT_MODULES)
 SHELL_SETUP_FLAGS ?= --yes --no-chsh
 BOOTSTRAP_FLAGS ?= --yes

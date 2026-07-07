@@ -8,7 +8,6 @@ Portable shell/editor/terminal setup for Linux and macOS.
 - `lazygit`
 - `nvim`
 - `opencode`
-- `pi`
 - `starship`
 - `tmux`
 - `zsh`
@@ -69,32 +68,6 @@ GNU Stow was considered, but is intentionally deferred. The current layout alrea
 - `fzf` - used by `tmux-sessionizer`
 - `tree-sitter` - used by current Neovim Treesitter setup
 - `uv` - Python tooling and optional Neovim `pynvim` provider setup
-
-## Pi config
-
-The `pi` module tracks safe, portable Pi config under `pi/agent/` and links it into Pi's default global config directory (`~/.pi/agent`):
-
-- `settings.json`
-- `local-llms.example.json`
-- `extensions/`
-- `themes/`
-
-`local-llms.json` is intentionally local-only because it contains machine-specific model paths and tuning. To enable local LLMs on a machine:
-
-```bash
-cp ~/dotfiles/pi/agent/local-llms.example.json ~/dotfiles/pi/agent/local-llms.json
-make link
-```
-
-Sensitive/runtime Pi files are intentionally not tracked, including auth tokens, sessions, package installs, locks, logs, local LLM config, and local LLM state.
-
-Pi can also use an XDG-style config location if `PI_CODING_AGENT_DIR` is exported, for example:
-
-```bash
-export PI_CODING_AGENT_DIR="$HOME/.config/pi/agent"
-```
-
-Without that environment variable, Pi uses `~/.pi/agent`, so this repo links the tracked files there.
 
 ## Notes
 

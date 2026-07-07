@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 #
 # toggle-terminal.sh
-#   – On Wayland: toggle (minimize/restore) Kitty via kdotool
+#   – On Wayland: toggle (minimize/restore) Ghostty via kdotool
 #       - For arch-linux: make sure to install `yay` first then install kdotool
 #       - yay -S kdotool
-#   – On X11:     toggle (minimize/restore) Kitty via xdotool + xprop
+#   – On X11:     toggle (minimize/restore) Ghostty via xdotool + xprop
 
 # ──── Configuration ────────────────────────────────────────────────────────────
 
 # The terminal command to launch if none is running:
-TERM_CMD="kitty"
+TERM_CMD="ghostty"
 # The window class to search for:
-TERM_CLASS="kitty"
+TERM_CLASS="ghostty"
 
 # ──── Wayland Backend ─────────────────────────────────────────────────────────
 
 toggle_wayland() {
     # Requires: kdotool
-    # Find one Kitty window
+    # Find one Ghostty window
     local win
     win=$(kdotool search --class "$TERM_CLASS" | head -n1)
 
@@ -29,7 +29,7 @@ toggle_wayland() {
             kdotool windowactivate "$win"
         fi
     else
-        # Launch a new Kitty
+        # Launch a new Ghostty
         "$TERM_CMD" &
     fi
 }
@@ -38,7 +38,7 @@ toggle_wayland() {
 
 toggle_x11() {
     # Requires: xdotool, xprop
-    # Get the first visible Kitty window ID
+    # Get the first visible Ghostty window ID
     local win_id minimized
 
     win_id=$(xdotool search --onlyvisible --class "$TERM_CLASS" 2>/dev/null | head -n1)
@@ -53,7 +53,7 @@ toggle_x11() {
             xdotool windowminimize "$win_id"
         fi
     else
-        # Launch a new Kitty
+        # Launch a new Ghostty
         "$TERM_CMD" &
     fi
 }

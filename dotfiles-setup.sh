@@ -10,11 +10,10 @@ CONFLICT_STRATEGY="backup"
 MODULES_ARG=""
 
 DEFAULT_MODULES=(
-    kitty
+    ghostty
     lazygit
     nvim
     opencode
-    pi
     starship
     tmux
     zsh
@@ -216,7 +215,7 @@ resolve_modules() {
 link_pi_module() {
     local pi_agent_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
     local pi_source_dir="$DOTFILES_DIR/pi/agent"
-    local pi_items=(settings.json local-llms.json extensions themes)
+    local pi_items=(settings.json local-llms.json local-llms.example.json extensions themes)
 
     if [ ! -d "$pi_source_dir" ]; then
         print_warning "Pi config module not found, skipping: pi"

@@ -61,13 +61,23 @@ else
     fail "Dotfiles repository missing or not a git repo: $DOTFILES_DIR"
 fi
 
-for module in kitty lazygit nvim opencode starship tmux zsh; do
+for module in ghostty lazygit nvim opencode starship tmux zsh; do
     check_symlink "$DOTFILES_DIR/$module" "$CONFIG_DIR/$module"
 done
 
-for pi_item in settings.json local-llms.json extensions themes; do
-    check_symlink "$DOTFILES_DIR/pi/agent/$pi_item" "$PI_AGENT_DIR/$pi_item"
-done
+if [ -d "$DOTFILES_DIR/pi/agent" ]; then
+    for pi_item in settings.json local-llms.example.json extensions themes; do
+        check_symlink "$DOTFILES_DIR/pi/agent/$pi_item" "$PI_AGENT_DIR/$pi_item"
+    done
+
+    if [ -e "$DOTFILES_DIR/pi/agent/local-llms.json" ]; then
+        check_symlink "$DOTFILES_DIR/pi/agent/local-llms.json" "$PI_AGENT_DIR/local-llms.json"
+    elif [ -e "$PI_AGENT_DIR/local-llms.json" ]; then
+        warn "$PI_AGENT_DIR/local-llms.json exists but is local-only; copy from local-llms.example.json if needed"
+    else
+        warn "Pi local LLM config is not set up; copy $DOTFILES_DIR/pi/agent/local-llms.example.json to $DOTFILES_DIR/pi/agent/local-llms.json"
+    fi
+fi
 
 if [ -f "$CONFIG_DIR/zsh/.zshrc" ]; then
     if grep -Eq '/home/[A-Za-z0-9_.-]+|/Users/[A-Za-z0-9_.-]+' "$CONFIG_DIR/zsh/.zshrc"; then
@@ -87,7 +97,22 @@ for cmd in git nvim tmux; do
     fi
 done
 
-for optional_cmd in starship zoxide lazygit opencode pi; do
+if command -v nvim >/dev/null 2>&1; then
+    nvim_version="$(nvim --version | head -n1 | awk '{print $2}' | sed 's/^v//')"
+    if [ "$(printf '%s\n%s\n' "0.12.0" "$nvim_version" | sort -V | head -n1)" = "0.12.0" ]; then
+        pass "Neovim version satisfies >= 0.12.0 ($nvim_version)"
+    else
+        warn "Neovim version is $nvim_version; nvim config requires >= 0.12.0"
+    fi
+fi
+
+if command -v tree-sitter >/dev/null 2>&1; then
+    pass "Command available: tree-sitter ($(tree-sitter --version))"
+else
+    warn "Command missing: tree-sitter (required by current nvim-treesitter)"
+fi
+
+for optional_cmd in ghostty starship zoxide lazygit opencode pi; do
     if command -v "$optional_cmd" >/dev/null 2>&1; then
         pass "Optional command available: $optional_cmd"
     else
