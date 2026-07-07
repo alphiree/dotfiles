@@ -1,0 +1,72 @@
+# Migrated from ../kitty/kitty.conf
+
+# Window sizing/state
+window-save-state = never
+window-width = 153
+window-height = 37
+# Use Ghostty's default/native title bar decorations.
+# If Ghostty adds a cross-platform "minimal/simple" titlebar, prefer that here.
+window-decoration = auto
+
+# Font
+# Ghostty renders Nerd Font symbols best by using a normal programming font
+# as the primary face and its built-in Symbols Nerd Font fallback for icons.
+font-family = JetBrains Mono
+font-size = 14
+# Keep ligatures intact even when the cursor sits on/near the shaped text.
+font-shaping-break = no-cursor
+
+# macOS: match kitty `macos_option_as_alt yes`
+macos-option-as-alt = true
+
+# Glass/transparency
+background-opacity = 0.82
+background-blur = true
+
+# Terminal identity: Ghostty's native terminfo is preferred over xterm-kitty.
+term = xterm-ghostty
+
+# Use Ghostty's default shell startup. Start tmux manually when needed.
+
+# Theme migrated from ../kitty/theme.conf
+background = #0d0d0d
+foreground = #f5f1fd
+cursor-color = #f7f1ff
+cursor-text = #000000
+# Vim-style block cursor instead of a thin typing/beam line.
+cursor-style = block
+
+# Optional cursor animation.
+# Disable quickly by commenting these two lines, or by renaming/removing
+# ghostty/shaders/cursor_warp.glsl.
+# custom-shader = shaders/cursor_warp.glsl
+# custom-shader-animation = true
+
+selection-foreground = #363537
+selection-background = #f7f1ff
+palette = 0=#353536
+palette = 1=#e96b8d
+palette = 2=#91d595
+palette = 3=#f8e579
+palette = 4=#ee985f
+palette = 5=#928adc
+palette = 6=#7bd1e3
+palette = 7=#f5f1fd
+palette = 8=#69676c
+palette = 9=#fc618d
+palette = 10=#7bd88f
+palette = 11=#fce566
+palette = 12=#fd9353
+palette = 13=#948ae3
+palette = 14=#5ad4e6
+palette = 15=#f7f1ff
+
+# Reload Ghostty config quickly.
+keybind = ctrl+shift+r=reload_config
+
+# Match kitty's Ctrl+Shift+Arrow escape sequences.
+# These override Ghostty's default tab navigation on Ctrl+Shift+Left/Right.
+keybind = ctrl+shift+arrow_left=text:\x1b[1;6D
+keybind = ctrl+shift+arrow_right=text:\x1b[1;6C
+keybind = ctrl+shift+arrow_up=text:\x1b[1;6A
+keybind = ctrl+shift+arrow_down=text:\x1b[1;6B
