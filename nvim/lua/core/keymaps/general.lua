@@ -35,7 +35,7 @@ keymap.set("n", "<leader>br", function()
 	print("Buffer reloaded")
 end, { desc = "Reload current buffer" })
 
-keymap.set("n", "<leader>S", "<cmd>LspStop<CR>", { desc = "LspStop" })
+keymap.set("n", "<leader>S", "<cmd>lsp stop<CR>", { desc = "Stop LSP clients" })
 
 keymap.set("n", "<leader>cp", function()
 	vim.fn.setreg("+", vim.fn.expand("%:p"))

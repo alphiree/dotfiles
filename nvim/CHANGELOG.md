@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-07-06
+
+### Neovim 0.12 native cleanup
+
+- Migrated plugin management from `lazy.nvim` to native `vim.pack`.
+- Added `nvim-pack-lock.json` and removed `lazy-lock.json`.
+- Installed/tested local Neovim `v0.12.0` via `~/.local/bin/nvim`.
+- Consolidated active plugin setup into focused `lua/plugins/*.lua` modules.
+- Consolidated Mason, LSP servers, formatting, and linting into `lua/plugins/lsp.lua`.
+- Moved LSP attach behavior, diagnostics, native completion, and signature expansion into `lua/core/lsp.lua`.
+- Replaced `nvim-cmp`/LuaSnip completion with native `vim.lsp.completion` and `vim.snippet`.
+- Removed `Comment.nvim`; native `gc`/`gcc` commenting is used.
+- Removed `vim-fugitive` and `lazygit.nvim`; Gitsigns now covers hunk preview/reset/stage/blame/diff and terminal `lazygit` remains available.
+- Reduced Oil configuration to only custom behavior.
+- Migrated nvim-treesitter config toward the Neovim 0.12 `main` branch API.
+- Updated Linux bootstrap to install/link Neovim `0.12.0` when the package manager version is older and to ensure `tree-sitter` CLI availability.
+
 ## 2026-04-04
 
 ### Re-applied follow-up fixes

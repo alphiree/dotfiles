@@ -4,20 +4,23 @@ Personal Neovim configuration focused on Python, TypeScript/JavaScript, Go, SQL,
 
 ## Highlights
 
-- Lazy-loaded plugin management via `lazy.nvim`
-- LSP + diagnostics + code actions
+- Neovim `0.12+` native plugin management via `vim.pack`
+- Native LSP configuration with `vim.lsp.config()` + `vim.lsp.enable()`
+- Native LSP completion with `vim.lsp.completion` + `vim.snippet`
 - Formatting with `conform.nvim`
-- Linting with `nvim-lint`
+- SQL linting with `nvim-lint`
 - Fast search/navigation with Telescope + Oil
-- Git workflow support through Gitsigns, Fugitive, and Lazygit
+- Git hunks/blame/diff through Gitsigns
+- Built-in commenting via native `gc`/`gcc`
 
 ## Prerequisites
 
-- Neovim `>= 0.10`
+- Neovim `>= 0.12`
 - `git`
-- `fd` (for Telescope file search)
-- `ripgrep` (for Telescope live grep)
-- Optional: `python3` + `pynvim` for Python provider
+- `fd` for Telescope file search
+- `ripgrep` for Telescope live grep
+- `tree-sitter` CLI `>= 0.26.1` for the current nvim-treesitter branch
+- Optional: `uv tool install pynvim` or `NVIM_PYTHON3_HOST_PROG` for Python provider support
 
 ## Install
 
@@ -27,58 +30,70 @@ From a clean machine, place this folder at `~/.config/nvim` and start Neovim:
 nvim
 ```
 
-Plugins and external tools are installed by `lazy.nvim` + Mason.
+Plugins are installed by `vim.pack` into Neovim's package directory. External LSP servers/tools are installed by Mason.
 
 ## Machine-specific setup
 
 Do not hardcode machine paths in tracked files.
 
-1) Optional Python provider env var:
+### Python provider
+
+The Python provider only works when Neovim can find a Python interpreter with `pynvim` installed. Installing `pynvim` somewhere is not always enough; on macOS especially, provider lookup can be slow or inconsistent if Neovim has to scan Python environments.
+
+Recommended setup with `uv` for Neovim `0.12+`:
 
 ```bash
-export NVIM_PYTHON3_HOST_PROG="/absolute/path/to/python"
+uv tool install --upgrade pynvim
+uv tool update-shell
 ```
 
-2) Optional local overrides:
+Restart the shell after `uv tool update-shell`, then verify:
 
-- Copy `lua/core/local.example.lua` to `lua/core/local.lua`
-- Add machine-only overrides there
-- `lua/core/local.lua` is gitignored
+```bash
+command -v pynvim-python
+nvim --headless '+checkhealth provider' '+qa'
+```
+
+For Neovim `0.12+`, `pynvim` installed this way should be auto-detected through the `pynvim-python` tool on `PATH`.
+
+Only add an explicit provider if auto-detection is slow or fails. Prefer a machine-local setting, not a tracked path:
+
+```lua
+-- lua/core/local.lua, gitignored
+vim.g.python3_host_prog = "pynvim-python"
+```
+
+`lua/core/local.lua` is gitignored and should hold machine-only overrides.
 
 ## Config structure
 
 - `init.lua` bootstrap entrypoint
-- `lua/core/lazy-bootstrap.lua` lazy.nvim bootstrap and plugin imports
-- `lua/core/` editor options, keymaps, and autocmds
-- `lua/lsp.lua` shared LSP keymaps and diagnostics UI
-- `lua/plugins/` plugin specs
-- `lua/plugins/lsp/` LSP, formatter, linter, and Mason specs
-- `lua/plugins/themes/` active theme specs
-- `lua/plugins/archived/` disabled references only
+- `nvim-pack-lock.json` native `vim.pack` lockfile
+- `lua/core/pack-bootstrap.lua` plugin install/load list
+- `lua/core/lsp.lua` diagnostics, LSP keymaps, native completion, signature expansion
+- `lua/core/` editor options, keymaps, autocmds, transparency
+- `lua/plugins/` plugin setup modules
+- `lua/plugins/lsp.lua` Mason, LSP server list, formatting, linting
 
 ## Useful commands
 
-- `:Lazy` plugin manager UI
+- `:lua vim.pack.update()` native plugin update review
+- `:lua vim.pack.get()` inspect native-pack plugins
 - `:Mason` LSP/tool installer UI
+- `:lsp restart` restart LSP clients
 - `<leader>ff` find files
 - `<leader>fs` grep in project
 - `-` open Oil file explorer
 - `<leader>mp` format file/range
+- `gc`/`gcc` native commenting
 
 ## Maintenance
 
-- Update plugins: `:Lazy sync`
+- Update plugins: `:lua vim.pack.update()`
 - Update parsers: `:TSUpdate`
 - Health checks: `:checkhealth`
-- Format Lua config: `stylua nvim/lua`
-- Check formatting in CI/local: `stylua --check nvim/lua`
-
-## CI
-
-GitHub Actions runs:
-
-- `stylua --check nvim/lua`
-- headless startup validation with `nvim --headless "+qa"`
+- Format Lua config: `stylua nvim/lua nvim/init.lua`
+- Headless startup check: `nvim --headless "+qa"`
 
 ## Changelog
 

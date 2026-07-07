@@ -1,7 +1,7 @@
 local keymap = vim.keymap
 
 -- Oil
-keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory" })
+keymap.set("n", "-", "<cmd>Oil<CR>", { desc = "Open parent directory" })
 keymap.set("n", "<C-Bslash>", function()
 	vim.cmd("vsplit | wincmd l")
 	require("oil").open()
@@ -12,17 +12,10 @@ keymap.set("n", "<leader>ef", function()
 	require("oil").open_float()
 end, { desc = "Open floating file explorer" })
 
--- Buffer delete (uses bufdelete if installed, falls back to built-in bdelete)
-keymap.set("n", "<leader>x", function()
-	if vim.fn.exists(":Bdelete") == 2 then
-		vim.cmd("Bdelete")
-	else
-		vim.cmd("bdelete")
-	end
-end, { desc = "Delete current buffer" })
+-- Buffer delete
+keymap.set("n", "<leader>x", "<cmd>bdelete<CR>", { desc = "Delete current buffer" })
 
 -- Plugin dashboards
-keymap.set("n", "<leader>ll", "<cmd>Lazy<CR>", { desc = "Lazy plugin manager" })
 keymap.set("n", "<leader>mm", "<cmd>Mason<CR>", { desc = "Mason package manager" })
 
 -- Telescope
@@ -55,7 +48,7 @@ keymap.set("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Recent fi
 keymap.set("n", "<leader>fs", "<cmd>Telescope live_grep<cr>", { desc = "Find string in cwd" })
 keymap.set("n", "<leader>fc", "<cmd>Telescope grep_string<cr>", { desc = "Find word under cursor" })
 
--- Git
+-- Git (Gitsigns only; Lazygit is used from the terminal)
 keymap.set("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<cr>", { desc = "Preview hunk" })
 keymap.set("n", "<leader>gr", "<cmd>Gitsigns reset_hunk<cr>", { desc = "Reset hunk" })
 keymap.set("n", "<leader>ga", function()
@@ -64,6 +57,5 @@ keymap.set("n", "<leader>ga", function()
 end, { desc = "Stage hunk" })
 keymap.set("n", "<leader>gn", "<cmd>Gitsigns next_hunk<cr>", { desc = "Next hunk" })
 keymap.set("n", "<leader>gN", "<cmd>Gitsigns prev_hunk<cr>", { desc = "Previous hunk" })
-keymap.set("n", "<leader>gb", "<cmd>Git blame<cr>", { desc = "Git blame" })
-keymap.set("n", "<leader>gd", "<cmd>Gdiffsplit<cr>", { desc = "Git diff split" })
-keymap.set("n", "<leader>gg", "<cmd>LazyGit<cr>", { desc = "Open Lazygit" })
+keymap.set("n", "<leader>gb", "<cmd>Gitsigns blame_line<cr>", { desc = "Git blame line" })
+keymap.set("n", "<leader>gd", "<cmd>Gitsigns diffthis<cr>", { desc = "Git diff current file" })
