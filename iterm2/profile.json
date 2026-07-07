@@ -1,6 +1,6 @@
 {
   "ASCII Anti Aliased": true,
-  "ASCII Ligatures": false,
+  "ASCII Ligatures": true,
   "Ambiguous Double Width": false,
   "Ansi 0 Color": {
     "Alpha Component": 1,
@@ -543,6 +543,7 @@
   "Name": "Dotfiles Dark",
   "Non Ascii Font": "JetBrainsMonoNFM-Regular 14",
   "Non-ASCII Anti Aliased": true,
+  "Non-ASCII Ligatures": true,
   "Normal Font": "JetBrainsMonoNFM-Regular 14",
   "Option Key Sends": 0,
   "Prompt Before Closing 2": false,

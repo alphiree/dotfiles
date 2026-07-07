@@ -26,11 +26,26 @@ Install the font first:
 brew install --cask font-jetbrains-mono-nerd-font
 ```
 
-The profile uses:
+The profile uses iTerm2's internal PostScript font name:
 
 ```text
 JetBrainsMonoNFM-Regular 14
 ```
+
+In the iTerm2 UI this should appear as a JetBrains Mono Nerd Font / Mono variant. If it does not, reselect the font manually in:
+
+```text
+Settings → Profiles → Text → Font
+```
+
+Ligatures are enabled in the profile with:
+
+```text
+ASCII Ligatures = true
+Non-ASCII Ligatures = true
+```
+
+If `==` still renders as two characters, confirm that the selected JetBrains Mono variant includes ligatures and that the imported `Dotfiles Dark` profile is the active profile.
 
 ## Frosted/transparent window
 
