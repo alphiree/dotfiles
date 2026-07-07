@@ -384,7 +384,7 @@
   },
   "Blinking Cursor": false,
   "Blur": true,
-  "Blur Radius": 24,
+  "Blur Radius": 40,
   "Bold Color": {
     "Alpha Component": 1,
     "Blue Component": 1.0,
