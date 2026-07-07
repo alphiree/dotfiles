@@ -59,9 +59,51 @@ CORE_PACKAGES=(
 )
 
 
+version_ge() {
+    [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]
+}
+
+neovim_version() {
+    command -v nvim >/dev/null 2>&1 || return 1
+    nvim --version | head -n1 | awk '{print $2}' | sed 's/^v//'
+}
+
+install_neovim_release_binary() {
+    local required_version="0.12.0"
+    local install_root="$HOME/.local/opt"
+    local target="$install_root/nvim-v$required_version"
+    local tmp_dir
+
+    if [ "$(uname -s)" != "Linux" ] || [ "$(uname -m)" != "x86_64" ]; then
+        echo_warning "Automatic Neovim binary install only supports Linux x86_64; please install Neovim >= $required_version manually"
+        return 0
+    fi
+
+    mkdir -p "$install_root" "$HOME/.local/bin"
+
+    if [ ! -x "$target/bin/nvim" ]; then
+        tmp_dir="$(mktemp -d)"
+        curl -L --fail "https://github.com/neovim/neovim/releases/download/v$required_version/nvim-linux-x86_64.tar.gz" -o "$tmp_dir/nvim.tar.gz"
+        tar -xzf "$tmp_dir/nvim.tar.gz" -C "$tmp_dir"
+        rm -rf "$target"
+        mv "$tmp_dir/nvim-linux-x86_64" "$target"
+        rm -rf "$tmp_dir"
+    fi
+
+    ln -sf "$target/bin/nvim" "$HOME/.local/bin/nvim"
+    echo_step "Linked Neovim v$required_version to ~/.local/bin/nvim"
+}
+
 install_neovim() {
     echo_header "Installing Neovim"
-    
+    local required_version="0.12.0"
+    local current_version="$(neovim_version || true)"
+
+    if [ -n "$current_version" ] && version_ge "$current_version" "$required_version"; then
+        echo_step "Neovim $current_version already satisfies >= $required_version"
+        return 0
+    fi
+
     # Add PPA for latest version on Ubuntu/Debian
     if [ "$PKG_MANAGER" = "apt" ]; then
         if ! grep -q "neovim-ppa/unstable" /etc/apt/sources.list.d/*.list 2>/dev/null; then
@@ -69,23 +111,47 @@ install_neovim() {
             sudo apt update
         fi
     fi
-    
+
     install_package "neovim"
+    current_version="$(neovim_version || true)"
+    if [ -z "$current_version" ] || ! version_ge "$current_version" "$required_version"; then
+        install_neovim_release_binary
+    fi
 }
 
-install_kitty() {
-    echo_header "Installing Kitty terminal"
-    
-    if [ "$PKG_MANAGER" = "apt" ]; then
-        install_if_missing \
-            "Kitty" \
-            "command -v kitty" \
-            "curl -L https://sw.kovidgoyal.net/kitty/installer.sh | sh /dev/stdin && \
-             mkdir -p ~/.local/bin && \
-             ln -sf ~/.local/kitty.app/bin/kitty ~/.local/bin/ && \
-             ln -sf ~/.local/kitty.app/bin/kitten ~/.local/bin/"
+setup_tree_sitter_cli() {
+    echo_header "Installing tree-sitter CLI"
+
+    if command -v tree-sitter >/dev/null 2>&1; then
+        echo_step "tree-sitter already installed: $(tree-sitter --version)"
+        return 0
+    fi
+
+    if [ "$PKG_MANAGER" = "pacman" ]; then
+        install_package "tree-sitter-cli" || true
+    fi
+
+    if command -v tree-sitter >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if command -v cargo >/dev/null 2>&1; then
+        cargo install tree-sitter-cli --version 0.26.10 --locked
+        mkdir -p "$HOME/.local/bin"
+        ln -sf "$HOME/.cargo/bin/tree-sitter" "$HOME/.local/bin/tree-sitter"
+        echo_step "Linked tree-sitter CLI to ~/.local/bin/tree-sitter"
     else
-        install_package "kitty"
+        echo_warning "tree-sitter CLI is required by nvim-treesitter on Neovim 0.12; install tree-sitter-cli manually"
+    fi
+}
+
+install_ghostty() {
+    echo_header "Installing Ghostty terminal"
+
+    if [ "$PKG_MANAGER" = "pacman" ]; then
+        install_package "ghostty"
+    else
+        echo_warning "Ghostty install is not automated for $PKG_MANAGER; install it manually if needed"
     fi
 }
 
@@ -154,28 +220,6 @@ setup_python() {
     # Add uv to PATH
     append_if_missing 'export PATH="$HOME/.local/bin:$PATH"' \
         'export PATH="$HOME/.local/bin:$PATH"' "$SHELL_RC"
-}
-
-setup_docker() {
-    echo_header "Setting up Docker"
-
-    if [ "$PKG_MANAGER" = "apt" ]; then
-        install_if_missing \
-            "docker" \
-            "command -v docker" \
-            "sudo apt install -y docker.io docker-compose-plugin"
-    else
-        install_package "docker"
-    fi
-
-    if command -v systemctl >/dev/null 2>&1; then
-        sudo systemctl enable --now docker >/dev/null 2>&1 || true
-    fi
-
-    if ! groups "$USER" | grep -qw docker; then
-        sudo usermod -aG docker "$USER"
-        echo_step "Added $USER to docker group (log out/in required)"
-    fi
 }
 
 install_lazygit() {
@@ -325,11 +369,12 @@ show_summary() {
     echo ""
     echo "Installed tools:"
     command -v nvim &>/dev/null && echo "  ✓ Neovim $(nvim --version | head -n1)"
+    command -v tree-sitter &>/dev/null && echo "  ✓ tree-sitter $(tree-sitter --version)"
     command -v tmux &>/dev/null && echo "  ✓ Tmux $(tmux -V)"
     command -v starship &>/dev/null && echo "  ✓ Starship $(starship --version)"
     command -v zoxide &>/dev/null && echo "  ✓ Zoxide $(zoxide --version)"
     command -v lazygit &>/dev/null && echo "  ✓ LazyGit $(lazygit --version)"
-    command -v kitty &>/dev/null && echo "  ✓ Kitty $(kitty --version)"
+    command -v ghostty &>/dev/null && echo "  ✓ Ghostty $(ghostty --version | head -n1)"
     command -v uv &>/dev/null && echo "  ✓ uv $(uv --version)"
     echo ""
 }
@@ -358,12 +403,12 @@ main() {
     
     # Install additional tools
     install_neovim
-    install_kitty
+    setup_tree_sitter_cli
+    install_ghostty
     install_starship
     install_zoxide
     setup_tmux
     setup_python
-    setup_docker
     install_lazygit
     
     # Configure system
@@ -379,7 +424,7 @@ main() {
     echo ""
     echo "Next steps:"
     echo "  1. Open tmux and press prefix + I to install plugins"
-    echo "  2. Open nvim and run :Lazy sync to install plugins"
+    echo "  2. Open nvim once; vim.pack and Mason will handle plugin/tool setup"
 }
 
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
