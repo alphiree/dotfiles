@@ -1,16 +1,15 @@
 # Contains the configuration for Starship prompt
 add_newline = true
 
-## Replace the '❯' symbol in the prompt with '➜'
 [character] # the name of the module we are configuring is 'character'
-success_symbol = '[➜](bold #a9dc76)' # the 'success_symbol' segment is being set to '➜' with the color 'bold green'
-error_symbol = '[➜](bold #ff5555)' # The 'error_symbol' segment is being set to '➜' with the color 'bold red'
+success_symbol = '[❯](bold #d97757)'
+error_symbol = '[❯](bold #d86464)'
 
 ## First param
 [username]
 format = "[$user]($style)"
-style_user = "#a9dc76"
-style_root = "#a9dc76"
+style_user = "#d97757"
+style_root = "#f29b79"
 show_always = true
 
 ## Second param
@@ -18,7 +17,7 @@ show_always = true
 disabled = false
 format = "[@$hostname]($style) "
 # style = "bold dimmed red"
-style = "white"
+style = "#a8a096"
 trim_at = "-"
 ssh_only = false
 
@@ -27,8 +26,8 @@ read_only = "🔒"
 # truncation_length = 3 
 # truncation_symbol = "…"
 truncate_to_repo = true
-# style = "#a9dc76"
-style = "bold #9d7acf"
+# style = "#d97757"
+style = "bold #f29b79"
 # style = "bold white"
 
 [git_branch]
@@ -36,16 +35,16 @@ always_show_remote = false
 symbol = ' '
 # truncation_length = 4
 # truncation_symbol = ''
-style = 'bold #a9dc76'
+style = 'bold #d97757'
 # ignore_branches = ['master', 'main']
 
 [git_status]
-style = "bold #ff5555"
+style = "bold #d86464"
 disabled = false
 
 [git_metrics]
-added_style = "#a9dc76"
-deleted_style = "#ff5555"
+added_style = "#7aa89f"
+deleted_style = "#d86464"
 disabled = false
 
 
@@ -53,7 +52,7 @@ disabled = false
 format = 'via [${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style)'
 version_format = "${raw}" 
 symbol = " "
-style = 'bold #a9dc76'
+style = 'bold #d97757'
 # pyenv_version_name = true
 # pyenv_prefix = "pyenv "
 
@@ -68,7 +67,7 @@ format = 'via [🐋 $context](blue bold) '
 
 [lua]
 format = 'via [ $version]($style) '
-style = 'bold #a9dc76'
+style = 'bold #d97757'
 
 
 # Disable the package module, hiding it from the prompt completely
@@ -90,9 +89,4 @@ disabled = true
 [localip]
 ssh_only = true
 disabled = false
-
-
-
-
-
 
