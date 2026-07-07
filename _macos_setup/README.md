@@ -51,28 +51,57 @@ Notes:
 
 ## 5. Link configs
 
-This repo currently uses its own linker, not GNU Stow:
+This repo currently uses its own linker, not GNU Stow.
+
+For a minimal macOS work setup, link only the configs normally needed on macOS:
+
+```bash
+make link LINK_FLAGS="--yes --modules lazygit,nvim,starship,tmux,zsh"
+```
+
+That creates links such as:
+
+```text
+~/.config/lazygit  -> ~/dotfiles/lazygit
+~/.config/nvim     -> ~/dotfiles/nvim
+~/.config/starship -> ~/dotfiles/starship
+~/.config/tmux     -> ~/dotfiles/tmux
+~/.config/zsh      -> ~/dotfiles/zsh
+```
+
+To link all default modules instead, run:
 
 ```bash
 make link
 ```
 
-That links modules such as `nvim`, `tmux`, `zsh`, `starship`, `ghostty`, and others into `~/.config`.
-
 GNU Stow was considered, but is intentionally deferred for now. The current layout already works with `make link`; moving to Stow would require restructuring modules into a Stow-style tree and should be a separate cleanup if needed later.
 
 ## 6. zsh
 
-Set up zsh files without changing the default shell:
+After linking `zsh`, zsh still needs to know that its config lives in `~/.config/zsh`. Run:
 
 ```bash
 make shell
 ```
 
-Or set zsh as the default shell too:
+This does not relink the config and does not change the default shell. It only ensures zsh is installed and adds this line to `~/.zshenv` and `~/.zprofile` if missing:
+
+```bash
+export ZDOTDIR="$HOME/.config/zsh"
+```
+
+If you also want to set zsh as the default shell, run:
 
 ```bash
 make shell-chsh
+```
+
+You can verify the setup with:
+
+```bash
+grep ZDOTDIR ~/.zshenv ~/.zprofile
+ls -ld ~/.config/zsh
 ```
 
 Machine-local shell overrides should go in:
