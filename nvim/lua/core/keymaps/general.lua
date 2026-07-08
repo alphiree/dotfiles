@@ -37,9 +37,30 @@ end, { desc = "Reload current buffer" })
 
 keymap.set("n", "<leader>S", "<cmd>lsp stop<CR>", { desc = "Stop LSP clients" })
 
+local function get_current_path()
+	if vim.bo.filetype == "oil" then
+		local ok, oil = pcall(require, "oil")
+		if ok then
+			local dir = oil.get_current_dir()
+			local entry = oil.get_cursor_entry()
+
+			if dir ~= nil then
+				if entry ~= nil and entry.name ~= nil then
+					return vim.fs.joinpath(dir, entry.name)
+				end
+
+				return dir
+			end
+		end
+	end
+
+	return vim.fn.expand("%:p")
+end
+
 keymap.set("n", "<leader>cp", function()
-	vim.fn.setreg("+", vim.fn.expand("%:p"))
-	print("Path copied to clipboard")
+	local path = get_current_path()
+	vim.fn.setreg("+", path)
+	print("Path copied to clipboard: " .. path)
 end, { desc = "Copy current path to clipboard" })
 
 keymap.set("n", "<leader>nf", function()
