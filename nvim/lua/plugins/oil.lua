@@ -1,6 +1,54 @@
 local M = {}
 
 function M.setup()
+	local logical_parents = {}
+
+	local function normalize_dir(path)
+		path = vim.fn.fnamemodify(path, ":p")
+		path = vim.fn.resolve(path)
+		path = vim.fn.fnamemodify(path, ":p")
+		return path
+	end
+
+	local function logical_parent()
+		local oil = require("oil")
+		local current_dir = oil.get_current_dir()
+		if not current_dir then
+			return require("oil.actions").parent.callback()
+		end
+
+		local parent = logical_parents[normalize_dir(current_dir)]
+		if parent then
+			oil.open(parent)
+		else
+			require("oil.actions").parent.callback()
+		end
+	end
+
+	local function logical_select(opts)
+		opts = opts or {}
+		local oil = require("oil")
+		local entry = oil.get_cursor_entry()
+
+		if entry and entry.name == ".." then
+			return logical_parent()
+		end
+
+		local current_dir = oil.get_current_dir()
+		if
+			entry
+			and current_dir
+			and entry.type == "link"
+			and entry.meta
+			and entry.meta.link_stat
+			and entry.meta.link_stat.type == "directory"
+		then
+			logical_parents[normalize_dir(current_dir .. entry.name)] = current_dir
+		end
+
+		oil.select(opts)
+	end
+
 	require("oil").setup({
 		default_file_explorer = true,
 		columns = { "icon" },
@@ -15,11 +63,16 @@ function M.setup()
 		constrain_cursor = "editable",
 		keymaps = {
 			["g?"] = { "actions.show_help", mode = "n" },
-			["<CR>"] = "actions.select",
-			["<C-t>"] = { "actions.select", opts = { tab = true } },
+			["<CR>"] = { callback = logical_select, desc = "Select entry" },
+			["<C-t>"] = {
+				callback = function()
+					logical_select({ tab = true })
+				end,
+				desc = "Select entry in new tab",
+			},
 			["<Bslash>"] = "actions.preview",
 			["<C-c>"] = { "actions.close", mode = "n" },
-			["-"] = { "actions.parent", mode = "n" },
+			["-"] = { callback = logical_parent, desc = "Open parent directory", mode = "n" },
 			["_"] = { "actions.open_cwd", mode = "n" },
 			["`"] = { "actions.cd", mode = "n" },
 			["~"] = { "actions.cd", opts = { scope = "tab" }, mode = "n" },
