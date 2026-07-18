@@ -35,13 +35,7 @@ function M.setup()
 		end
 
 		local current_dir = oil.get_current_dir()
-		if
-			entry
-			and current_dir
-			and entry.type == "link"
-			and entry.meta
-			and entry.meta.link_stat
-		then
+		if entry and current_dir and entry.type == "link" and entry.meta and entry.meta.link_stat then
 			-- Oil normalizes links before opening them. Remember the logical
 			-- parent for both linked directories and linked files so `-` can
 			-- navigate back to the path the link was selected from.
