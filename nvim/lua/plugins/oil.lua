@@ -3,7 +3,7 @@ local M = {}
 function M.setup()
 	local logical_parents = {}
 
-	local function normalize_dir(path)
+	local function normalize_path(path)
 		path = vim.fn.fnamemodify(path, ":p")
 		path = vim.fn.resolve(path)
 		path = vim.fn.fnamemodify(path, ":p")
@@ -17,7 +17,7 @@ function M.setup()
 			return require("oil.actions").parent.callback()
 		end
 
-		local parent = logical_parents[normalize_dir(current_dir)]
+		local parent = logical_parents[normalize_path(current_dir)]
 		if parent then
 			oil.open(parent)
 		else
@@ -41,12 +41,27 @@ function M.setup()
 			and entry.type == "link"
 			and entry.meta
 			and entry.meta.link_stat
-			and entry.meta.link_stat.type == "directory"
 		then
-			logical_parents[normalize_dir(current_dir .. entry.name)] = current_dir
+			-- Oil normalizes links before opening them. Remember the logical
+			-- parent for both linked directories and linked files so `-` can
+			-- navigate back to the path the link was selected from.
+			logical_parents[normalize_path(current_dir .. entry.name)] = current_dir
 		end
 
 		oil.select(opts)
+	end
+
+	function M.open_parent()
+		local oil = require("oil")
+		local bufname = vim.api.nvim_buf_get_name(0)
+		if vim.bo.filetype ~= "oil" and bufname ~= "" and not bufname:match("^[^/]+://") then
+			local parent = logical_parents[normalize_path(bufname)]
+			if parent then
+				return oil.open(parent)
+			end
+		end
+
+		oil.open()
 	end
 
 	require("oil").setup({

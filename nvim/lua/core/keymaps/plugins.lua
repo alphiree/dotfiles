@@ -1,7 +1,9 @@
 local keymap = vim.keymap
 
 -- Oil
-keymap.set("n", "-", "<cmd>Oil<CR>", { desc = "Open parent directory" })
+keymap.set("n", "-", function()
+	require("plugins.oil").open_parent()
+end, { desc = "Open parent directory" })
 keymap.set("n", "<C-Bslash>", function()
 	vim.cmd("vsplit | wincmd l")
 	require("oil").open()
