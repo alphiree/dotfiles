@@ -45,6 +45,9 @@ vim.pack.add({
 	-- git
 	gh("lewis6991/gitsigns.nvim"),
 
+	-- SQL worksheets
+	{ src = "git@github.com:alphiree/sql-worksheet.nvim.git", version = "5b5f8c9" },
+
 	-- language tooling
 	gh("mason-org/mason.nvim"),
 	gh("mason-org/mason-lspconfig.nvim"),
