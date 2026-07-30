@@ -6,6 +6,7 @@ local modules = {
 	"plugins.editing",
 	"plugins.git",
 	"plugins.oil",
+	"plugins.sql-worksheet",
 	"plugins.telescope",
 	"plugins.lsp",
 	"plugins.python",

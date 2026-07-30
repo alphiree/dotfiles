@@ -73,14 +73,18 @@
       "src": "https://github.com/nvim-lua/plenary.nvim"
     },
     "sql-worksheet.nvim": {
-      "rev": "5b5f8c9f9e710635d7aca8a63c4df1d455b1265d",
-      "src": "git@github.com:alphiree/sql-worksheet.nvim.git",
-      "version": "'5b5f8c9'"
+      "rev": "0dcd762b0c478fa7a781cfd8e78dec1021c229ad",
+      "src": "https://github.com/alphiree/sql-worksheet.nvim",
+      "version": "'v0.2.0'"
     },
     "telescope.nvim": {
       "rev": "5255aa27c422de944791318024167ad5d40aad20",
       "src": "https://github.com/nvim-telescope/telescope.nvim",
       "version": "'v0.2.2'"
+    },
+    "touchup.nvim": {
+      "rev": "9410a8640262f9b43ce04b0779d2c66134ae311b",
+      "src": "https://github.com/noisesfromspace/touchup.nvim"
     },
     "venv-selector.nvim": {
       "rev": "cc4bb3975de8835291f9bb45889e96c6b2795fc4",
