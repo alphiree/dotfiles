@@ -46,7 +46,7 @@ vim.pack.add({
 	gh("lewis6991/gitsigns.nvim"),
 
 	-- SQL worksheets
-	{ src = gh("alphiree/sql-worksheet.nvim"), version = "v0.2.0" },
+	{ src = gh("alphiree/sql-worksheet.nvim") },
 	-- For local plugin development, temporarily use:
 	-- { src = "/home/alphire/Desktop/sql-worksheet.nvim" },
 
