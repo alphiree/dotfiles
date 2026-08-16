@@ -73,7 +73,7 @@
       "src": "https://github.com/nvim-lua/plenary.nvim"
     },
     "sql-worksheet.nvim": {
-      "rev": "9d5bb9511414d808455ab53d12588c1561cb13c5",
+      "rev": "40cbc6344bfd2981c804f7ebb3d9e372fade9498",
       "src": "https://github.com/alphiree/sql-worksheet.nvim"
     },
     "telescope.nvim": {
