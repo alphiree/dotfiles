@@ -84,7 +84,7 @@ prefix+d or prefix+q detach
 
 `prefix+c` is backed by `scripts/new-tab-after-current.sh` instead of Herdr's built-in `new_tab` binding.
 
-It creates a tab immediately, focuses it, and moves it beside the current tab with Herdr's socket API. Tab labels stay as Herdr's generated number labels, so manual renames are not touched.
+It creates a tab immediately, focuses it, and moves it beside the current tab with Herdr's socket API. New tabs start with Herdr's generated number labels. Pi can replace these with a conversation title (see below); manually named tabs are left alone.
 
 Reload after edits:
 
@@ -142,6 +142,29 @@ herdr integration status
 Integrations can provide lifecycle state, native session identity, or both. This improves the sidebar status (`working`, `blocked`, `done`, `idle`) and lets supported agents resume their native conversations after a Herdr server restart.
 
 `resume_agents_on_restore = true` only enables Herdr's restore behavior. It does not replace the integrations: supported agents need a current integration to report the native session reference that Herdr later resumes.
+
+## Automatic Pi tab titles
+
+`pi/agent/extensions/herdr-tab-title/index.ts` names the **tab containing Pi**, not the workspace/space. It is separate from Herdr's managed integration so integration updates do not overwrite it.
+
+- After the first completed exchange, it generates a short topic title using Pi's current model and authentication. This is one additional model request per unnamed session, using only a bounded excerpt of user/assistant text (no tool output or thinking).
+- The title is also saved as Pi's session name, so resume/reload can reuse it without another model request. Existing unnamed conversations are titled on startup/reload.
+- Only single-pane tabs with a numeric/empty label or a title owned by this extension are eligible. Manual tab names and subagent tabs are preserved. Numeric labels are assumed to be Herdr defaults.
+- `/name Your title` updates an eligible tab too. Renaming the tab directly with `prefix+,` overrides automatic naming; changing it back to a number only re-enables naming in a fresh Pi process/session without prior ownership.
+- `/new` and `/resume` in the same Pi process can replace the previous auto-title. Split-pane tabs are intentionally skipped to prevent competing sessions from renaming one shared tab.
+- Provider/socket failures do not interrupt the conversation. A failed generation is attempted at most once per extension load; `/reload` allows another attempt. A successful title stays stable throughout the conversation.
+
+New Pi sessions load the extension automatically. In an existing Pi session, run:
+
+```text
+/reload
+```
+
+Tests (Node 22.18+ with native TypeScript support):
+
+```bash
+node --test pi/agent/extensions/herdr-tab-title/test.mjs
+```
 
 ## Session restore note
 
