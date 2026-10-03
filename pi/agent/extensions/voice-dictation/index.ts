@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { loadConfig } from "./config.ts";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isKeyRelease, isKeyRepeat, matchesKey } from "@earendil-works/pi-tui";
 import { DictationController, submitEditorDraft } from "./controller.ts";
@@ -6,11 +6,8 @@ import { DictationController, submitEditorDraft } from "./controller.ts";
 const HOTKEY = "ctrl+alt+d";
 
 export default function voiceDictation(pi: ExtensionAPI): void {
-	const config = JSON.parse(readFileSync(new URL("./config.json", import.meta.url), "utf8"));
-	if (config.inputDevice !== undefined && typeof config.inputDevice !== "string") {
-		throw new Error("voice-dictation/config.json: inputDevice must be a string");
-	}
-	const dictation = new DictationController(config.inputDevice || undefined);
+	const config = loadConfig();
+	const dictation = new DictationController(config);
 	let removeInputListener: (() => void) | undefined;
 
 	pi.registerShortcut(HOTKEY, {
@@ -24,7 +21,7 @@ export default function voiceDictation(pi: ExtensionAPI): void {
 				case "": case "toggle": await dictation.toggle(ctx); break;
 				case "stop": await dictation.finish(); break;
 				case "cancel": await dictation.cancel(); break;
-				case "status": ctx.ui.notify(`Dictation: ${dictation.state} · Ctrl+Alt+D · microphone: ${config.inputDevice || "system default"}`, "info"); break;
+				case "status": ctx.ui.notify(`Dictation: ${dictation.state} · Ctrl+Alt+D · microphone: ${config.inputDevice || "system default"} · vocabulary: ${config.vocabulary.length} terms`, "info"); break;
 				default: ctx.ui.notify("Use /dictate [toggle|stop|cancel|status]", "info");
 			}
 		},

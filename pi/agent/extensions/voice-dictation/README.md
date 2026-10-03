@@ -17,7 +17,7 @@ LAN server, background recording, or separate API key.
 - `/dictate`: the same toggle.
 - `/dictate stop`: stop and transcribe an active recording.
 - `/dictate cancel`: discard/cancel, including connection/transcription in progress.
-- `/dictate status`: show state and configured microphone.
+- `/dictate status`: show state, configured microphone, and vocabulary term count.
 - Wait for `voice: recording` before speaking.
 - During recording, the footer displays a scrolling loudness history:
   `mic [▁▁▂▄▆█▅▃▂▁▁]`. Silence is normal; near-full-scale PCM shows
@@ -39,13 +39,43 @@ On a fresh checkout:
 ```sh
 cd ~/.pi/agent/extensions/voice-dictation
 npm ci --ignore-scripts
+# Optional: only copy if you do not already have a personal config.json.
+cp -n config.json.example config.json
 ```
 
-`config.json` currently selects `alsa:pipewire`, following the system default input
-on this Linux machine. Select your external/headset microphone in desktop sound
-settings. Set `inputDevice` to another native helper device ID to pin it, or use
-an empty string for the helper's platform default. Run `/reload` after edits.
-The shortcut is intentionally a simple constant in `index.ts`.
+`config.json` is personal and Git-ignored; `config.json.example` is the shared
+starting point. Without a config, dictation uses the helper's platform-default
+microphone and no vocabulary hints. Invalid configuration produces an error
+instead of silently ignoring your settings.
+
+Set `inputDevice` to `alsa:pipewire` to follow the default PipeWire input on Linux,
+or another native helper device ID to pin it. An empty string uses the helper's
+platform default. Select your external/headset microphone in desktop sound settings.
+Run `/reload` after config edits. The shortcut is a simple constant in `index.ts`.
+
+### Personal vocabulary
+
+Add a short `vocabulary` array of tool names, project names, or technical terms:
+
+```json
+{
+  "inputDevice": "alsa:pipewire",
+  "vocabulary": ["Pi", "Codex", "TypeScript"]
+}
+```
+
+The extension builds a short recognition prompt once on load and includes it in
+its existing transcription setup message. There is no extra network round trip,
+context lookup, session scan, or second AI pass during dictation. Server-side
+prompt processing may still affect latency; this has not been benchmarked live.
+
+Keep only terms you actually dictate: excess hints can bias recognition toward
+words you did not say. These are spelling hints, not guaranteed replacements.
+Limits are 32 terms, 64 characters per term, and 1024 characters for the joined
+list (local safeguards, not claimed API limits). Terms must be nonempty and
+single-line; surrounding whitespace and case-insensitive duplicates are removed.
+Set `"vocabulary": []` or omit it to restore the original prompt-free behavior.
+No automatic learning or text replacement is performed.
 
 ## Dependencies and privacy
 
@@ -58,7 +88,10 @@ The shortcut is intentionally a simple constant in `index.ts`.
 - Audio streams to OpenAI at
   `wss://api.openai.com/v1/realtime?intent=transcription`, using the existing Codex
   login. The model is `gpt-4o-mini-transcribe`, with near-field noise reduction and
-  explicit commit on stop, matching the previously working extension.
+  explicit commit on stop, matching the previously working extension. Configured
+  vocabulary is also sent to OpenAI as a transcription prompt; do not put secrets
+  in it. Editor drafts, session history, and repository files are not read for
+  transcription context.
 - Account availability/limits and the subscription endpoint are controlled by
   OpenAI and may change. A Pro plan is not a guarantee of future endpoint access.
 - No local audio files, token logging, transcript history, LAN listener, or second
@@ -69,7 +102,8 @@ The shortcut is intentionally a simple constant in `index.ts`.
 
 ## Maintenance
 
-- `index.ts`: shortcut, commands, configuration, and Pi lifecycle.
+- `index.ts`: shortcut, commands, and Pi lifecycle.
+- `config.ts`: optional personal configuration, validation, and vocabulary prompt.
 - `controller.ts`: start/stop/cancel, editor insertion, status lifecycle.
 - `auth.ts`: resolved Codex login headers.
 - `recorder.ts`: bounded JSONL process bridge and cleanup.
@@ -84,13 +118,17 @@ Node's native TypeScript stripping (Node >=22.19).
 ## Migration / rollback
 
 The `@howaboua/pi-codex-conversion@3.0.35` package was removed from Pi's configured
-package list, not deleted from disk. Old configuration files and the disabled
-older `codex-voice` experiment are left untouched. Its `/codex` command and unused
+package list, not deleted from disk. The disabled older `codex-voice` experiment
+also remains on disk. The unused agent-root files `codex-voice.json`,
+`pi-codex-conversion.json`, and `REALTIME-SYSTEM-PROMPT.md` are removed during
+migration; this extension does not read them. Its predecessor's `/codex` command and unused
 voice/realtime/LAN shortcuts are intentionally not loaded. Dictation is now
 `/dictate` or the unchanged Ctrl+Alt+D shortcut.
 
 Do not enable both implementations at once: they share the dictation shortcut.
-To roll back, move this directory under `~/.pi/agent/disabled-extensions/`, restore
+To roll back, first recreate the old package's voice-only configuration and
+microphone settings; the removed legacy files are not retained here. Move this
+directory under `~/.pi/agent/disabled-extensions/`, restore
 `npm:@howaboua/pi-codex-conversion@3.0.35` to `settings.json`'s `packages`, then
 restart Pi. The old installed version needs the local voice-only provider guard
 if using the newer model catalog; reinstalling that package removes its patches.

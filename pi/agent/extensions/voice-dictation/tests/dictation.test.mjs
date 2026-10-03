@@ -12,7 +12,7 @@ const pcm = (...samples) => {
 };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-function fixture(overrides = {}) {
+function fixture(overrides = {}, vocabulary = []) {
 	const statuses = [], notices = [], pasted = [], calls = [];
 	let audio, recordError, transcribeError;
 	let editor = "";
@@ -45,7 +45,7 @@ function fixture(overrides = {}) {
 		transcriber: onError => { transcribeError = onError; return transcriber; },
 		...overrides,
 	};
-	const controller = new DictationController("alsa:pipewire", deps);
+	const controller = new DictationController({ inputDevice: "alsa:pipewire", vocabulary }, deps);
 	return { controller, ctx, statuses, notices, pasted, calls, recorder, transcriber,
 		audio: chunk => audio(chunk), fail: error => recordError(error), networkFail: error => transcribeError(error) };
 }
@@ -64,6 +64,19 @@ test("toggle records, shows waveform, drains PCM, inserts editable transcript, a
 	assert.deepEqual(f.pasted, ["A dictated sentence."]);
 	assert.equal(f.statuses.at(-1), undefined);
 	assert.deepEqual(f.calls.slice(-5), ["recorder.stop", "audio", "transcriber.finish", "recorder.close", "transcriber.close"]);
+});
+
+test("controller passes static vocabulary on each recording without changing the editor", async () => {
+	const f = fixture({}, ["Pi", "tmux"]);
+	const prompts = [];
+	f.transcriber.open = async (_auth, prompt) => { prompts.push(prompt); };
+	f.ctx.ui.setEditorText("Private existing draft");
+	for (let i = 0; i < 2; i++) {
+		await f.controller.toggle(f.ctx);
+		await f.controller.cancel();
+	}
+	assert.deepEqual(prompts, Array(2).fill("Relevant names and technical terms: Pi, tmux."));
+	assert.equal(f.ctx.ui.getEditorText(), "Private existing draft");
 });
 
 test("Enter stops capture, sends the full draft once, and clears the editor", async () => {
@@ -255,8 +268,8 @@ function wire(timeout = 100) {
 	const transcriber = new Transcriber(error => errors.push(error), () => ({ socket, dispose: async () => { disposed++; } }), timeout);
 	return { socket, errors, transcriber, disposed: () => disposed };
 }
-async function openWire(f) {
-	const opening = f.transcriber.open({ headers: {} });
+async function openWire(f, prompt) {
+	const opening = f.transcriber.open({ headers: {} }, prompt);
 	f.socket.dispatchEvent(new Event("open"));
 	f.socket.receive({ type: "session.updated" });
 	await opening;
@@ -282,6 +295,23 @@ test("transcription keeps the original protocol and waits for setup acknowledgem
 	await f.transcriber.close();
 	await f.transcriber.close();
 	assert.equal(f.disposed(), 1);
+});
+
+test("vocabulary uses only the existing setup message and never leaks into another run", async () => {
+	const f = wire();
+	const prompt = "Relevant names and technical terms: Pi, tmux.";
+	await openWire(f, prompt);
+	assert.equal(f.socket.sent.length, 1);
+	const configured = structuredClone(f.socket.sent[0]);
+	assert.equal(configured.session.audio.input.transcription.prompt, prompt);
+	delete configured.session.audio.input.transcription.prompt;
+	assert.deepEqual(configured, SESSION_UPDATE); // All other wire settings stay unchanged.
+	assert.equal(SESSION_UPDATE.session.audio.input.transcription.prompt, undefined);
+	await f.transcriber.close();
+	const plain = wire();
+	await openWire(plain);
+	assert.deepEqual(plain.socket.sent, [SESSION_UPDATE]);
+	await plain.transcriber.close();
 });
 
 test("too-short recording is not committed", async () => {

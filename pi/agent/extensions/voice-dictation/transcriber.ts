@@ -70,14 +70,24 @@ export class Transcriber {
 		});
 	}
 
-	async open(auth: VoiceAuth): Promise<void> {
+	async open(auth: VoiceAuth, prompt?: string): Promise<void> {
 		if (this.closed) throw new Error("Dictation cancelled");
 		this.connection = this.connector(auth);
 		const socket = this.connection.socket;
 		const ready = this.wait();
 		socket.addEventListener("open", () => {
 			if (this.closed) return;
-			try { socket.send(JSON.stringify(SESSION_UPDATE)); }
+			try {
+				// Hints travel in the existing setup message: no extra request or cleanup model.
+				const update = prompt ? {
+					...SESSION_UPDATE,
+					session: { ...SESSION_UPDATE.session, audio: { input: {
+						...SESSION_UPDATE.session.audio.input,
+						transcription: { ...SESSION_UPDATE.session.audio.input.transcription, prompt },
+					} } },
+				} : SESSION_UPDATE;
+				socket.send(JSON.stringify(update));
+			}
 			catch { this.fail(new Error("Failed to configure transcription")); }
 		});
 		socket.addEventListener("message", event => {

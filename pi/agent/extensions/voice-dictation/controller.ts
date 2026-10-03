@@ -2,6 +2,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { resolveVoiceAuth, type VoiceAuth } from "./auth.ts";
 import { Recorder } from "./recorder.ts";
 import { Transcriber } from "./transcriber.ts";
+import { vocabularyPrompt, type DictationConfig } from "./config.ts";
 import { InputMeter, type InputLevel } from "./input-level.ts";
 
 export const STATUS_KEY = "voice-dictation";
@@ -45,8 +46,10 @@ export class DictationController {
 	private active?: Run;
 	private deps: Dependencies;
 	private inputDevice?: string;
-	constructor(inputDevice?: string, deps: Dependencies = defaults) {
-		this.inputDevice = inputDevice;
+	private prompt?: string;
+	constructor(config: DictationConfig = { vocabulary: [] }, deps: Dependencies = defaults) {
+		this.inputDevice = config.inputDevice;
+		this.prompt = vocabularyPrompt(config.vocabulary);
 		this.deps = deps;
 	}
 	get state(): string { return this.active?.phase ?? "idle"; }
@@ -78,7 +81,7 @@ export class DictationController {
 			}, onError);
 			await run.recorder.open();
 			if (!this.isCurrent(run)) return;
-			await run.transcriber.open(auth);
+			await run.transcriber.open(auth, this.prompt);
 			if (!this.isCurrent(run)) return;
 			run.phase = "recording";
 			run.recorder.start(this.inputDevice);

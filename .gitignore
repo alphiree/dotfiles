@@ -46,6 +46,8 @@ pi/agent/disabled-extensions/
 pi/agent/tmp/
 pi/agent/lan-voice/
 pi/agent/**/node_modules/
+# Personal dictation microphone and vocabulary (share config.json.example instead)
+pi/agent/extensions/voice-dictation/config.json
 # Local Git helper definition
 pi/agent/agents/git-helper.md
 # Run artifacts created in the repository root
