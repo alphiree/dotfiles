@@ -1,10 +1,24 @@
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { resolveVoiceAuth, type VoiceAuth } from "./auth.ts";
 import { Recorder } from "./recorder.ts";
 import { Transcriber } from "./transcriber.ts";
 import { InputMeter, type InputLevel } from "./input-level.ts";
 
 export const STATUS_KEY = "voice-dictation";
+type SubmitDraft = (ctx: ExtensionContext) => void;
+
+export function submitEditorDraft(ctx: ExtensionContext, send: ExtensionAPI["sendUserMessage"]): void {
+	const draft = ctx.ui.getEditorText();
+	if (!draft.trim()) return;
+	ctx.ui.setEditorText("");
+	try {
+		// Match normal Enter: queue a steering message if the agent is busy.
+		send(draft, { deliverAs: "steer", expandPromptTemplates: true });
+	} catch (error) {
+		ctx.ui.setEditorText(draft);
+		throw error;
+	}
+}
 type RecorderPort = Pick<Recorder, "open" | "start" | "stop" | "close">;
 type TranscriberPort = Pick<Transcriber, "open" | "append" | "finish" | "close">;
 export interface Dependencies {
@@ -19,6 +33,7 @@ interface Run {
 	recorder?: RecorderPort;
 	transcriber?: TranscriberPort;
 	closing?: Promise<void>;
+	submit?: SubmitDraft;
 }
 const defaults: Dependencies = {
 	authenticate: resolveVoiceAuth,
@@ -73,9 +88,23 @@ export class DictationController {
 		}
 	}
 
-	async finish(): Promise<void> {
+	// Called only for unmodified Enter. Consume it while voice is active so Pi
+	// cannot submit an incomplete draft; repeats/releases must not commit twice.
+	handleEnter(submit: SubmitDraft, repeatOrRelease = false): boolean {
+		if (!this.active) return false;
+		if (!repeatOrRelease) void this.finish(submit);
+		return true;
+	}
+
+	async finish(submit?: SubmitDraft): Promise<void> {
 		const run = this.active;
-		if (!run || run.phase !== "recording") return;
+		if (!run) return;
+		if (run.phase === "transcribing") {
+			if (submit) run.submit = submit;
+			return;
+		}
+		if (run.phase !== "recording") return;
+		run.submit = submit;
 		run.phase = "transcribing";
 		this.render(run);
 		try {
@@ -83,8 +112,10 @@ export class DictationController {
 			if (!this.isCurrent(run)) return;
 			const text = await run.transcriber!.finish();
 			if (!this.isCurrent(run)) return;
-			if (text) run.ctx.ui.pasteToEditor(text);
-			else run.ctx.ui.notify("No speech transcribed", "info");
+			if (text) {
+				run.ctx.ui.pasteToEditor(text);
+				run.submit?.(run.ctx);
+			} else run.ctx.ui.notify("No speech transcribed", "info");
 			await this.close(run);
 		} catch (error) {
 			await this.fail(run, error);

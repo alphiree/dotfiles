@@ -1,12 +1,19 @@
 # Local voice dictation
 
-A manually maintained Pi extension. **Speak → review editable text → Enter.**
+A manually maintained Pi extension. **Speak → review**, or **speak → Enter to send**.
 No model tools, provider registration, prompt rewriting, realtime assistant,
-LAN server, background recording, automatic submission, or separate API key.
+LAN server, background recording, or separate API key.
 
 ## Use
 
-- **Ctrl+Alt+D**: start recording; press again to stop and transcribe.
+- **Ctrl+Alt+D**: start recording; press again to stop and transcribe for review.
+- **Enter while recording**: stop, finish transcription, and send the entire editor
+  draft (including any existing typed text) to this Pi session. If the agent is
+  busy, queue it as a steering message, like normal Enter. Enter also requests
+  sending if transcription is already finishing. Repeated key events are ignored.
+  Empty/failed transcription sends nothing; session switch/reload cancels pending
+  submission. Unmodified Enter is intercepted only while dictation is active;
+  Shift+Enter and normal idle editing keep their usual behavior.
 - `/dictate`: the same toggle.
 - `/dictate stop`: stop and transcribe an active recording.
 - `/dictate cancel`: discard/cancel, including connection/transcription in progress.
@@ -17,8 +24,9 @@ LAN server, background recording, automatic submission, or separate API key.
   `clipping risk`. This is not a frequency spectrum or recognition score.
 - Shutdown, `/reload`, or switching sessions cancels recording and closes resources.
 
-The transcript uses Pi's normal paste-into-editor behavior. Nothing is sent to
-an agent until you submit it. No transcription cleanup/rewrite model is involved.
+The transcript uses Pi's normal paste-into-editor behavior. Ctrl+Alt+D leaves it
+editable; pressing Enter while dictating explicitly authorizes sending when
+transcription finishes. No transcription cleanup/rewrite model is involved.
 
 ## Setup / configuration
 

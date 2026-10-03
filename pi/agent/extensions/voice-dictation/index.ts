@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isKeyRelease, isKeyRepeat, matchesKey } from "@earendil-works/pi-tui";
-import { DictationController } from "./controller.ts";
+import { DictationController, submitEditorDraft } from "./controller.ts";
 
 const HOTKEY = "ctrl+alt+d";
 
@@ -34,6 +34,10 @@ export default function voiceDictation(pi: ExtensionAPI): void {
 		if (ctx.mode === "tui") {
 			removeInputListener = ctx.ui.onTerminalInput(data => {
 				if (matchesKey(data, HOTKEY) && (isKeyRepeat(data) || isKeyRelease(data))) return { consume: true };
+				if (matchesKey(data, "enter") && dictation.handleEnter(
+					recordingCtx => submitEditorDraft(recordingCtx, (text, options) => pi.sendUserMessage(text, options)),
+					isKeyRepeat(data) || isKeyRelease(data),
+				)) return { consume: true };
 				return undefined;
 			});
 		}

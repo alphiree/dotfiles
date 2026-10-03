@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DictationController } from "../controller.ts";
+import { DictationController, submitEditorDraft } from "../controller.ts";
 import { InputMeter } from "../input-level.ts";
 import { authHeaders, resolveVoiceAuth } from "../auth.ts";
 import { Transcriber, SESSION_UPDATE, TRANSCRIPTION_URL } from "../transcriber.ts";
@@ -15,13 +15,16 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 function fixture(overrides = {}) {
 	const statuses = [], notices = [], pasted = [], calls = [];
 	let audio, recordError, transcribeError;
+	let editor = "";
 	const ctx = {
 		hasUI: true,
 		ui: {
 			theme: { fg: (_color, text) => text },
 			setStatus: (key, value) => statuses.push(value),
 			notify: (text, type) => notices.push({ text, type }),
-			pasteToEditor: text => pasted.push(text),
+			pasteToEditor: text => { pasted.push(text); editor += text; },
+			getEditorText: () => editor,
+			setEditorText: text => { editor = text; },
 		},
 	};
 	const recorder = {
@@ -61,6 +64,91 @@ test("toggle records, shows waveform, drains PCM, inserts editable transcript, a
 	assert.deepEqual(f.pasted, ["A dictated sentence."]);
 	assert.equal(f.statuses.at(-1), undefined);
 	assert.deepEqual(f.calls.slice(-5), ["recorder.stop", "audio", "transcriber.finish", "recorder.close", "transcriber.close"]);
+});
+
+test("Enter stops capture, sends the full draft once, and clears the editor", async () => {
+	const f = fixture(), sent = [];
+	const completed = Promise.withResolvers();
+	f.transcriber.finish = () => completed.promise;
+	f.ctx.ui.setEditorText("Existing draft: ");
+	const submit = ctx => submitEditorDraft(ctx, (text, options) => sent.push({ text, options }));
+	assert.equal(f.controller.handleEnter(submit), false); // Ordinary Enter when idle.
+	await f.controller.toggle(f.ctx);
+	assert.equal(f.controller.handleEnter(submit, true), true); // Release/repeat doesn't stop.
+	assert.equal(f.controller.state, "recording");
+	assert.equal(f.controller.handleEnter(submit), true);
+	assert.equal(f.controller.state, "transcribing");
+	f.controller.handleEnter(submit, true);
+	f.controller.handleEnter(submit); // Another Enter while awaiting transcription.
+	assert.deepEqual(sent, []);
+	await tick();
+	completed.resolve("spoken words");
+	await tick();
+	assert.deepEqual(sent, [{ text: "Existing draft: spoken words", options: { deliverAs: "steer", expandPromptTemplates: true } }]);
+	assert.equal(f.ctx.ui.getEditorText(), "");
+	assert.equal(f.calls.filter(c => c === "recorder.stop").length, 1);
+	assert.equal(f.controller.state, "idle");
+});
+
+test("Enter during review transcription upgrades it to stop-and-send", async () => {
+	const f = fixture(), sent = [];
+	const completed = Promise.withResolvers();
+	f.transcriber.finish = () => completed.promise;
+	await f.controller.toggle(f.ctx);
+	const stopping = f.controller.finish(); // Ctrl+Alt+D initially requested review.
+	await tick();
+	f.controller.handleEnter(ctx => submitEditorDraft(ctx, text => sent.push(text)));
+	completed.resolve("Send after all.");
+	await stopping;
+	assert.deepEqual(sent, ["Send after all."]);
+});
+
+test("empty or failed transcription never submits the existing draft", async () => {
+	for (const fail of [false, true]) {
+		const f = fixture(), sent = [];
+		f.ctx.ui.setEditorText("Keep my existing draft");
+		f.transcriber.finish = async () => { if (fail) throw new Error("Transcription failed"); };
+		await f.controller.toggle(f.ctx);
+		await f.controller.finish(ctx => submitEditorDraft(ctx, text => sent.push(text)));
+		assert.deepEqual(sent, []);
+		assert.equal(f.ctx.ui.getEditorText(), "Keep my existing draft");
+		assert.equal(f.controller.state, "idle");
+	}
+});
+
+test("cancel or session shutdown suppresses a pending Enter submission", async () => {
+	const f = fixture(), sent = [];
+	const completed = Promise.withResolvers();
+	f.transcriber.finish = () => completed.promise;
+	await f.controller.toggle(f.ctx);
+	const stopping = f.controller.finish(ctx => submitEditorDraft(ctx, text => sent.push(text)));
+	await tick();
+	await f.controller.cancel();
+	completed.resolve("Do not send into another session");
+	await stopping;
+	assert.deepEqual(sent, []);
+	assert.deepEqual(f.pasted, []);
+});
+
+test("synchronous submission rejection restores the transcribed draft", async () => {
+	const f = fixture();
+	await f.controller.toggle(f.ctx);
+	await f.controller.finish(ctx => submitEditorDraft(ctx, () => { throw new Error("Session unavailable"); }));
+	assert.equal(f.ctx.ui.getEditorText(), "A dictated sentence.");
+	assert.equal(f.controller.state, "idle");
+	assert.equal(f.notices.at(-1).text, "Session unavailable");
+});
+
+test("Enter while connecting is consumed without sending unrelated draft", async () => {
+	const auth = Promise.withResolvers();
+	const f = fixture({ authenticate: () => auth.promise });
+	let submitted = false;
+	const starting = f.controller.toggle(f.ctx);
+	assert.equal(f.controller.handleEnter(() => { submitted = true; }), true);
+	assert.equal(submitted, false);
+	await f.controller.cancel();
+	auth.resolve({ headers: {} });
+	await starting;
 });
 
 test("silence is a flat waveform, not a warning", async () => {
