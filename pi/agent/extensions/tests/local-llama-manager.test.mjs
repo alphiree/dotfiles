@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -62,6 +62,47 @@ test("loadConfig resolves projector paths in the config directory and rejects be
     import manager from ${JSON.stringify(url)};
     manager({ registerProvider() { throw new Error("should not register"); } });
   `], { env: { ...process.env, PI_CODING_AGENT_DIR: dir }, stdio: "pipe" }), /Invalid mmproj/);
+});
+
+test("relative config directories resolve once, including repeated validation and argument builds", t => {
+  const { dir } = projector(t);
+  const configDir = join(dir, "config");
+  mkdirSync(configDir);
+  const path = join(configDir, "mmproj.gguf");
+  writeFileSync(path, "GGUFtest fixture");
+  writeFileSync(join(configDir, "local-llms.json"), JSON.stringify({
+    ...config, llamaServer: "~/llama-server", stateDir: "state",
+    models: { vision: { path: "/model.gguf", input: ["text", "image"], mmproj: "mmproj.gguf" } },
+  }));
+  const url = new URL("../local-llama-manager.ts", import.meta.url).href;
+  const result = execFileSync(process.execPath, ["--input-type=module", "-e", `
+    import assert from "node:assert/strict";
+    import { loadConfig, validateModelVision, buildServerArgs } from ${JSON.stringify(url)};
+    const config = loadConfig();
+    const model = config.models.vision;
+    assert.equal(model.mmproj, ${JSON.stringify(path)});
+    validateModelVision("vision", model, config.commonArgs);
+    validateModelVision("vision", model, config.commonArgs);
+    const first = buildServerArgs(config, "vision", model);
+    assert.deepEqual(buildServerArgs(config, "vision", model), first);
+    assert.equal(first[first.indexOf("--mmproj") + 1], ${JSON.stringify(path)});
+    console.log(model.mmproj);
+  `], { cwd: dir, env: { ...process.env, PI_CODING_AGENT_DIR: "config" }, encoding: "utf8", stdio: "pipe" });
+  assert.equal(result.trim(), path);
+});
+
+test("underscore projector selection flags cannot bypass conflict validation", t => {
+  const { path } = projector(t);
+  const model = { path: "/model.gguf", input: ["text", "image"], mmproj: path };
+  for (const flag of ["--no_mmproj", "--mmproj_url", "--mmproj_auto", "--no_mmproj_auto", "--no_mmproj-auto"]) {
+    // Preserve defensive rejection of assignment-style flags too.
+    for (const arg of [flag, `${flag}=value`]) {
+      assert.throws(() => buildServerArgs({ ...config, commonArgs: [arg] }, "vision", model), /conflicts with mmproj/);
+      assert.throws(() => buildServerArgs(config, "vision", { ...model, args: [arg] }), /conflicts with mmproj/);
+    }
+  }
+  // Underscore spelling of projector offload tuning is not a selector conflict.
+  assert.ok(buildServerArgs(config, "vision", { ...model, args: ["--no_mmproj_offload"] }).includes("--no_mmproj_offload"));
 });
 
 test("projector is propagated once, and only selected models advertise image input", t => {

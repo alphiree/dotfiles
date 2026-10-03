@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { spawn, execFile } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync, statSync, readSync } from "node:fs";
-import { basename, isAbsolute, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import {
   executableIdentity, getVerifiedCurrent, inspectLinuxProcess, ownsProcessGroup,
@@ -65,7 +65,7 @@ function expandPath(path: string): string {
 
 function resolveConfigPath(path: string): string {
   const expanded = expandPath(path);
-  return isAbsolute(expanded) ? expanded : join(CONFIG_DIR, expanded);
+  return resolve(CONFIG_DIR, expanded);
 }
 
 export function loadConfig(): Config {
@@ -99,8 +99,11 @@ export function validateModelVision(alias: string, model: LocalModelConfig, comm
   if (typeof model.mmproj !== "string" || !model.mmproj.trim()) {
     throw new Error(`Image input for ${alias} requires an mmproj path`);
   }
-  const conflicting = [...commonArgs, ...(model.args ?? [])].find((arg) =>
-    /^(?:-mm|-mmu|--mmproj(?:-url|-auto)?|--no-mmproj(?:-auto)?)(?:=|$)/.test(arg));
+  const conflicting = [...commonArgs, ...(model.args ?? [])].find((arg) => {
+    // llama.cpp accepts underscores in long option names as hyphens.
+    const normalized = arg.startsWith("--") ? arg.replaceAll("_", "-") : arg;
+    return /^(?:-mm|-mmu|--mmproj(?:-url|-auto)?|--no-mmproj(?:-auto)?)(?:=|$)/.test(normalized);
+  });
   if (conflicting) {
     throw new Error(`Projector argument ${conflicting} for ${alias} conflicts with mmproj; use the model field`);
   }
