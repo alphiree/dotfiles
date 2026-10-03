@@ -15,7 +15,7 @@ while (!existsSync(join(piRoot, "dist/core/extensions/loader.js"))) {
 	piRoot = parent;
 }
 const { loadExtensions } = await import(pathToFileURL(join(piRoot, "dist/core/extensions/loader.js")));
-const extensionPath = process.env.ASK_USER_QUESTION_EXTENSION || fileURLToPath(new URL("../ask-user-question.ts", import.meta.url));
+const extensionPath = process.env.ASK_USER_QUESTION_EXTENSION || fileURLToPath(new URL("./index.ts", import.meta.url));
 const loaded = await loadExtensions([extensionPath], process.cwd());
 assert.deepEqual(loaded.errors, []);
 const tool = loaded.extensions[0].tools.get("ask_user_question").definition;

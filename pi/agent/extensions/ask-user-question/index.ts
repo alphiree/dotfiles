@@ -8,8 +8,8 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { displayText } from "./ask-user-question/terminal-text.ts";
-import { SafeEditor } from "./ask-user-question/safe-editor.ts";
+import { displayText } from "./terminal-text.ts";
+import { SafeEditor } from "./safe-editor.ts";
 
 interface AskOption {
 	label: string;
