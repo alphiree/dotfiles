@@ -19,7 +19,7 @@
 Regression tests (Node 25, no install needed):
 
 ```sh
-node --test pi/agent/extensions/tests/local-llama-manager.test.mjs
+node --test pi/agent/extensions/tests/local-llama-manager.test.mjs pi/agent/extensions/local-llama-manager/*.test.ts
 ```
 
 ## Verified Qwen3.5-9B setup (2026-10-03)
@@ -124,4 +124,12 @@ At the user's request, copied (not re-downloaded) the projector into `~/Desktop/
 
 Re-ran `runtime/evidence/image-test.py` with the Desktop projector path using the installed llama.cpp 9631 binary, isolated loopback port 18080 and worktree server state. Exit 0; actual response: **“Left: Red square; Right: Blue circle”**, 652 input / 12 output tokens. Sampled GPU peak 7248 MiB; minimum host available 1959360 KiB (about 1913 MiB). No llama-server remained afterward. Previous direct-image evidence was preserved in `runtime/evidence/before-models-path-retest/`; latest `image-*` outputs describe this retest. Researcher delegation was not repeated in this follow-up.
 
-A read-only three-way file merge check against main at `7273313` found one conflict in `startServer`: main adds `expectedExecutable = executableIdentity(...)` where this branch adds `args = buildServerArgs(...)`. Integration must retain both security verification and vision argument validation, and rerun both sets of tests. No merge/rebase or main edits were performed.
+A read-only three-way file merge check against main at `7273313` found one conflict in `startServer`: main adds `expectedExecutable = executableIdentity(...)` where this branch adds `args = buildServerArgs(...)`. At that stage no merge/rebase or main edits were performed.
+
+### Security integration verification
+
+On explicit merge approval, discovered that main's earlier history had been rewritten. Aborted the resulting broad merge conflicts and replayed only the three vision/docs commits onto integration branch `pi-integrate/qwen-vision-67592c91`, based on main `2658980`. Original topic branch retained. The single relevant startup conflict was resolved by keeping both argument validation and executable identity verification before opening resources. All process-identity checks and verified shutdown behavior remain intact.
+
+Updated the security wiring test harness to use the extracted argument builder and added a regression for invalid vision configuration failing before resources are opened. Combined vision/security tests: **43/43 pass**. The worktree prepared configuration still changes only standard Qwen; global configuration, other models, existing profiles and the default profile remain unchanged.
+
+Repeated the isolated live image test with the integrated security+vision manager, installed CUDA llama.cpp, and Desktop projector: exit 0; **“A red square is on the left. A blue circle is on the right.”** (652 input / 20 output tokens). Sampled GPU peak 7294 MiB; minimum host available 2676976 KiB (about 2614 MiB). No llama-server remained after shutdown. Prior evidence preserved under `runtime/evidence/before-security-integration-retest/`; current `image-*` files contain this run. This does not repeat the earlier researcher-delegation acceptance or expand workload guarantees. Active ignored configuration remains unmodified; code integration does not activate vision.

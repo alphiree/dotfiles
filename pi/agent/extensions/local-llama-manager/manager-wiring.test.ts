@@ -6,6 +6,7 @@ import { stripTypeScriptTypes } from "node:module";
 import { test } from "node:test";
 import { createContext, runInContext } from "node:vm";
 import { ownsProcessGroup, sameExecutable, type ProcessIdentity } from "./process-identity.ts";
+import { buildServerArgs } from "../local-llama-manager.ts";
 
 const source = readFileSync(new URL("../local-llama-manager.ts", import.meta.url), "utf8");
 function body(start: string, end: string) {
@@ -20,7 +21,7 @@ const identity: ProcessIdentity = {
 };
 const config = { llamaServer: "/symlink/llama-server", port: 8080, stateDir: "/mock-state", models: { model: { path: "/mock-model" } } };
 
-function spawnFixture(actual: ProcessIdentity | undefined, spawnError = false) {
+function spawnFixture(actual: ProcessIdentity | undefined, spawnError = false, model: Parameters<typeof buildServerArgs>[2] = config.models.model) {
   const writes = new Map<string, string>();
   const closes: number[] = [];
   let spawnSeen = false;
@@ -34,7 +35,7 @@ function spawnFixture(actual: ProcessIdentity | undefined, spawnError = false) {
     writeFileSync: (path: string, value: string) => writes.set(path, value),
     executableIdentity: (path: string) => { assert.equal(path, config.llamaServer); return identity.executable; },
     inspectLinuxProcess: (pid: number) => { assert.equal(pid, 4242); assert.ok(spawnSeen); return actual; },
-    ownsProcessGroup, sameExecutable,
+    ownsProcessGroup, sameExecutable, buildServerArgs,
     spawn: (path: string, args: string[], options: { detached: boolean }) => {
       assert.equal(path, identity.executable.path);
       assert.ok(args.includes("/mock-model")); assert.equal(options.detached, true);
@@ -46,7 +47,7 @@ function spawnFixture(actual: ProcessIdentity | undefined, spawnError = false) {
     },
   });
   runInContext(startBody, context);
-  return { run: () => context.startServer(config, "model", config.models.model), writes, closes, waited: () => waited };
+  return { run: () => context.startServer(config, "model", model), writes, closes, waited: () => waited };
 }
 
 test("manager spawns canonical server path and persists inspected identity before readiness", async () => {
@@ -66,6 +67,14 @@ for (const actual of [undefined, { ...identity, executable: { ...identity.execut
     assert.equal(f.writes.size, 0); assert.equal(f.waited(), false);
   });
 }
+
+test("invalid vision config fails before opening resources or spawning", async () => {
+  const f = spawnFixture(identity, false, { path: "/mock-model", input: ["text", "image"] });
+  await assert.rejects(f.run(), /requires an mmproj path/);
+  assert.equal(f.writes.size, 0);
+  assert.deepEqual(f.closes, []);
+  assert.equal(f.waited(), false);
+});
 
 test("exec/spawn failure is surfaced without publishing a PID", async () => {
   const f = spawnFixture(identity, true);
