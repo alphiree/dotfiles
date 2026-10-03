@@ -7,8 +7,10 @@ import { join } from "node:path";
 import { stripTypeScriptTypes } from "node:module";
 import { test } from "node:test";
 import { createContext, runInContext } from "node:vm";
-import { ownsProcessGroup, sameExecutable, type ProcessIdentity } from "./process-identity.ts";
+import { ownsProcessGroup, sameExecutable, sameProcess, type ProcessIdentity } from "./process-identity.ts";
 import { buildServerArgs } from "../local-llama-manager.ts";
+import { createOwnedStream } from "./owned-stream.ts";
+import { TestStream, successStream } from "./stream-fixture.ts";
 
 const source = readFileSync(new URL("../local-llama-manager.ts", import.meta.url), "utf8");
 function body(start: string, end: string) {
@@ -52,7 +54,7 @@ function spawnFixture(actual: ProcessIdentity | undefined, spawnError = false, m
     },
   });
   runInContext(startBody, context);
-  return { run: () => context.startServer(config, "model", model), writes, closes, waited: () => waited };
+  return { context, run: (signal?: AbortSignal) => context.startServer(config, "model", model, signal), writes, closes, waited: () => waited };
 }
 
 test("manager spawns canonical server path and persists inspected identity before readiness", async () => {
@@ -86,6 +88,26 @@ test("exec/spawn failure is surfaced without publishing a PID", async () => {
   await assert.rejects(f.run(), /mock exec failure/);
   assert.equal(f.writes.size, 0);
 });
+
+for (const stillOwned of [true, false]) {
+  for (const failure of ["cancelled", "failed"]) {
+    test(`${failure} startup only shuts down its verified spawned process (owned=${stillOwned})`, async () => {
+      const f = spawnFixture(identity);
+      const controller = new AbortController();
+      let stopped = false;
+      f.context.sameProcess = sameProcess;
+      f.context.getManagedCurrent = () => ({ identity: stillOwned ? identity : { ...identity, startTime: "999" } });
+      f.context.stopManagedServer = async () => { stopped = true; };
+      f.context.waitUntilServing = async (_config: unknown, _alias: string, _identity: unknown, signal: AbortSignal) => {
+        assert.equal(signal, controller.signal);
+        if (failure === "cancelled") { controller.abort(); signal.throwIfAborted(); }
+        throw new Error("startup timeout");
+      };
+      await assert.rejects(f.run(controller.signal), failure === "cancelled" ? /aborted/ : /startup timeout/);
+      assert.equal(stopped, stillOwned);
+    });
+  }
+}
 
 function reuseFixture(current: any, served?: string) {
   const calls: string[] = [];
@@ -203,7 +225,8 @@ async function factoryFixture(current: any, busy = false) {
     sessionManager: { getBranch: () => [] },
   };
   Object.assign(f.context, {
-    mockAi: { openAICompletionsApi: () => ({ streamSimple: () => { f.calls.push("request"); return "stream"; } }) },
+    mockAi: { openAICompletionsApi: () => ({ streamSimple: () => { f.calls.push("request"); return successStream(); } }), createAssistantMessageEventStream: () => new TestStream() },
+    createOwnedStream, idleShutdownDelay: () => undefined,
     loadConfig: () => latest, ensureStateDir: () => {},
     registerLocalProvider: (_pi: unknown, _config: unknown, delegate: any) => { stream = delegate; },
     acquireServerLock: async () => { lockAttempts++; return busy ? undefined : () => f.calls.push("release"); },
@@ -245,9 +268,9 @@ test("busy matching selection can report already loaded without any network/stop
 
 test("stream guard independently rejects stale config and loadConfig failures before delegate", async () => {
   const f = await factoryFixture(owned(["old-config"]));
-  assert.throws(f.stream, /Restart required/);
+  assert.match((await f.stream().result()).errorMessage, /Restart required/);
   f.context.loadConfig = () => { throw new Error("Invalid mmproj"); };
-  assert.throws(f.stream, /Invalid mmproj/);
+  assert.match((await f.stream().result()).errorMessage, /Invalid mmproj/);
   assert.deepEqual(f.calls, []);
 });
 
@@ -259,7 +282,7 @@ test("restart command surfaces external refusal instead of reporting Restarted",
   assert.deepEqual(f.calls, ["release"]);
 });
 
-test("a pending same-alias load with old config cannot authorize a new config", async () => {
+test("an eager same-alias load with old config cannot authorize a new request", async () => {
   const f = await factoryFixture(undefined);
   let current: any;
   f.context.getManagedCurrent = () => current;
@@ -277,12 +300,11 @@ test("a pending same-alias load with old config cannot authorize a new config", 
   f.handlers.get("model_select")({ model: f.ctx.model }, f.ctx);
   await new Promise(resolve => setImmediate(resolve));
   f.setConfig({ ...config, provider: "local", baseUrl: "http://localhost:8080/v1", commonArgs: ["--jinja"] });
-  const turn = f.handlers.get("before_agent_start")({}, f.ctx);
-  // Let the second caller enter loadLocalModel while the old load is pending.
-  await new Promise(resolve => setImmediate(resolve));
   finishLoad();
-  await assert.rejects(turn, /Restart required/);
-  assert.throws(f.stream, /Restart required/);
+  await new Promise(resolve => setImmediate(resolve));
+  const request = f.stream();
+  assert.match((await request.result()).errorMessage, /Restart required/);
+  assert.match((await f.stream().result()).errorMessage, /Restart required/);
   assert.ok(!f.calls.includes("stop") && !f.calls.includes("request"));
 });
 
@@ -292,20 +314,20 @@ test("previously scheduled idle shutdown leaves a now-stale server untouched", a
   f.context.idleShutdownDelay = () => 1000;
   f.context.setTimeout = (callback: () => void) => { timer = callback; return { unref() {} }; };
   f.context.clearTimeout = () => {};
-  await f.handlers.get("agent_end")({}, f.ctx);
+  await f.stream().result();
   assert.equal(typeof timer, "function");
   f.setConfig({ ...config, provider: "local", baseUrl: "http://localhost:8080/v1", commonArgs: ["--jinja"] });
   timer();
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(f.lockAttempts(), 0);
-  assert.deepEqual(f.calls, []);
+  assert.equal(f.lockAttempts(), 1);
+  assert.deepEqual(f.calls, ["request", "release"]);
 });
 
-test("startup failure releases turn lock; provider guard still rejects", async () => {
+test("startup failure releases request lock and reports a terminal error", async () => {
   const f = await factoryFixture(undefined);
   f.context.getServedModel = async () => "model";
-  await assert.rejects(f.handlers.get("before_agent_start")({}, f.ctx), /not started by this extension/);
+  assert.match((await f.stream().result()).errorMessage, /not started by this extension/);
   assert.deepEqual(f.calls, ["release"]);
-  assert.throws(f.stream, /No verified extension-owned/);
-  assert.deepEqual(f.calls, ["release"]);
+  assert.match((await f.stream().result()).errorMessage, /not started by this extension/);
+  assert.deepEqual(f.calls, ["release", "release"]);
 });

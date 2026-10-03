@@ -10,6 +10,9 @@ import {
   type CurrentServerInfo, type ProcessIdentity,
 } from "./local-llama-manager/process-identity.ts";
 
+import { createOwnedStream } from "./local-llama-manager/owned-stream.ts";
+import { setTimeout as delay } from "node:timers/promises";
+
 interface LocalModelConfig {
   name?: string;
   path: string;
@@ -35,7 +38,7 @@ interface Config {
   models: Record<string, LocalModelConfig>;
 }
 
-type ServerLockPhase = "loading" | "turn";
+type ServerLockPhase = "loading" | "request";
 
 interface ServerLockInfo {
   ownerId: string;
@@ -159,8 +162,8 @@ function lockPath(config: Config) {
   return join(config.stateDir, "server-use.lock");
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal) {
+  return delay(ms, undefined, { signal });
 }
 
 function processAlive(pid: number): boolean {
@@ -217,7 +220,7 @@ function ctxSessionFile(ctx: any | undefined): string | undefined {
 
 function describeLock(lock: ServerLockInfo): string {
   const parts = [
-    lock.phase === "turn" ? "active turn" : "model load",
+    lock.phase === "loading" ? "model load" : "active request",
     lock.model ? `model=${lock.model}` : undefined,
     `pid=${lock.pid}`,
     lock.sessionFile ? `session=${basename(lock.sessionFile)}` : undefined,
@@ -231,12 +234,14 @@ async function acquireServerLock(
   model: string,
   phase: ServerLockPhase,
   wait: boolean,
+  signal?: AbortSignal,
 ): Promise<ReleaseLock | undefined> {
   ensureStateDir(config);
   const ownerId = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   let notified = false;
 
   while (true) {
+    signal?.throwIfAborted();
     removeLockIfStale(config);
 
     const now = new Date().toISOString();
@@ -284,13 +289,13 @@ async function acquireServerLock(
       ctx?.ui?.setStatus?.("local-llm", "waiting for llama.cpp lock");
     }
 
-    await sleep(LOCK_POLL_MS);
+    await sleep(LOCK_POLL_MS, signal);
   }
 }
 
-async function getServedModelInfo(config: Config): Promise<{ id?: string; sizeBytes?: number; params?: string } | undefined> {
+async function getServedModelInfo(config: Config, signal?: AbortSignal): Promise<{ id?: string; sizeBytes?: number; params?: string } | undefined> {
   try {
-    const response = await fetch(`${config.baseUrl}/models`, { signal: AbortSignal.timeout(1500) });
+    const response = await fetch(`${config.baseUrl}/models`, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(1500)]) : AbortSignal.timeout(1500) });
     if (!response.ok) return undefined;
     const json = (await response.json()) as { data?: Array<{ id?: string; meta?: { size?: number; n_params?: number } }> };
     const first = json.data?.[0];
@@ -300,8 +305,10 @@ async function getServedModelInfo(config: Config): Promise<{ id?: string; sizeBy
   }
 }
 
-async function getServedModel(config: Config): Promise<string | undefined> {
-  return (await getServedModelInfo(config))?.id;
+async function getServedModel(config: Config, signal?: AbortSignal): Promise<string | undefined> {
+  const info = await getServedModelInfo(config, signal);
+  signal?.throwIfAborted();
+  return info?.id;
 }
 
 function formatBytes(bytes?: number): string | undefined {
@@ -345,19 +352,20 @@ function tailLog(config: Config, maxLines = 10): string {
   }
 }
 
-async function waitUntilServing(config: Config, alias: string, identity: ProcessIdentity) {
+async function waitUntilServing(config: Config, alias: string, identity: ProcessIdentity, signal?: AbortSignal) {
   const timeout = config.startupTimeoutMs ?? 180000;
   const started = Date.now();
   let lastSeen: string | undefined;
 
   while (Date.now() - started < timeout) {
+    signal?.throwIfAborted();
     if (!sameProcess(identity, inspectLinuxProcess(identity.pid))) {
       const logTail = tailLog(config);
       throw new Error(`llama-server exited before serving ${alias}. Log: ${logPath(config)}${logTail ? `\nRecent log tail:\n${logTail}` : ""}`);
     }
-    lastSeen = await getServedModel(config);
+    lastSeen = await getServedModel(config, signal);
     if (lastSeen === alias) return;
-    await sleep(1000);
+    await sleep(1000, signal);
   }
 
   const logTail = tailLog(config);
@@ -373,7 +381,8 @@ async function stopManagedServer(config: Config): Promise<boolean> {
   return stopVerifiedServer(config.stateDir, config.shutdownTimeoutMs ?? 15000);
 }
 
-async function startServer(config: Config, alias: string, model: LocalModelConfig) {
+async function startServer(config: Config, alias: string, model: LocalModelConfig, signal?: AbortSignal) {
+  signal?.throwIfAborted();
   if (process.platform !== "linux") throw new Error("Managed llama-server requires Linux process identity verification.");
   if (!existsSync(config.llamaServer)) {
     throw new Error(`llama-server not found: ${config.llamaServer}`);
@@ -415,7 +424,17 @@ async function startServer(config: Config, alias: string, model: LocalModelConfi
   writeFileSync(currentPath(config), JSON.stringify({ alias, model: model.path, pid: child.pid, identity, args, startedAt: new Date().toISOString() }, null, 2));
   writeFileSync(pidPath(config), String(child.pid));
 
-  await waitUntilServing(config, alias, identity);
+  try {
+    await waitUntilServing(config, alias, identity, signal);
+  } catch (error) {
+    // A failed/cancelled load must not leave a false-ready same-alias record.
+    // Only stop the process we just spawned and still own; never signal a
+    // replaced/unverifiable PID. Retain the lock through verified shutdown.
+    if (sameProcess(identity, getManagedCurrent(config)?.identity)) {
+      await stopManagedServer(config);
+    }
+    throw error;
+  }
 }
 
 function desiredServerArgs(config: Config, alias: string): string[] {
@@ -441,7 +460,8 @@ function externalServerError(config: Config, served: string, alias: string): Err
   return new Error(`A llama.cpp server is already serving ${served} on ${config.baseUrl}, but it was not started by this extension. Its startup configuration cannot be verified, even for the same alias. Stop it manually, then select ${alias} again; /local-llm restart ${alias} cannot restart an external server.`);
 }
 
-async function ensureModelRunning(config: Config, alias: string) {
+async function ensureModelRunning(config: Config, alias: string, signal?: AbortSignal) {
+  signal?.throwIfAborted();
   // Validate/build before state cleanup, shutdown, or spawn, including switches.
   const desired = desiredServerArgs(config, alias);
   const current = getManagedCurrent(config);
@@ -451,13 +471,14 @@ async function ensureModelRunning(config: Config, alias: string) {
     return "already-running";
   }
 
-  const served = await getServedModel(config);
+  const served = await getServedModel(config, signal);
+  signal?.throwIfAborted();
   // /models reports aliases, not model/projector paths or startup options.
   // Never treat it as evidence of compatible (text OR image) external state.
   if (served && !current) throw externalServerError(config, served, alias);
 
   await stopManagedServer(config);
-  await startServer(config, alias, config.models[alias]);
+  await startServer(config, alias, config.models[alias], signal);
   return "started";
 }
 
@@ -513,23 +534,49 @@ export default async function localLlamaManager(pi: ExtensionAPI) {
   const config = loadConfig();
   ensureStateDir(config);
 
-  // Hook errors (including before_agent_start) are logged and swallowed by Pi.
-  // Guard the actual provider stream too: synchronous setup failure becomes an
-  // assistant error, never a request. This also covers retries/tool continuations.
-  // Load Pi's standard serializer only when instantiating the extension.
-  const { openAICompletionsApi } = await import("@earendil-works/pi-ai/compat");
+  // All inference routes (including compaction, tree summaries and retry) use
+  // the registered provider. Agent hooks cannot safely own these requests.
+  const { openAICompletionsApi, createAssistantMessageEventStream } = await import("@earendil-works/pi-ai/compat");
   const completions = openAICompletionsApi();
-  registerLocalProvider(pi, config, (model, context, options) => {
-    const latestConfig = loadConfig();
-    if (model.baseUrl !== latestConfig.baseUrl || model.provider !== latestConfig.provider) {
-      throw new Error("Local llama.cpp provider endpoint changed. Reload Pi before sending a request.");
+  function requestConfig(model: { baseUrl?: string; provider: string }, stateDir?: string) {
+    const latest = loadConfig();
+    if (model.baseUrl !== latest.baseUrl || model.provider !== latest.provider ||
+        (stateDir !== undefined && latest.stateDir !== stateDir)) {
+      throw new Error("Local llama.cpp provider endpoint or state directory changed. Reload Pi before sending a request.");
     }
-    assertRequestServer(latestConfig, model.id);
-    return completions.streamSimple(model, context, options);
-  });
+    return latest;
+  }
+  registerLocalProvider(pi, config, createOwnedStream(completions.streamSimple, createAssistantMessageEventStream, async (model, signal) => {
+    let latestConfig = requestConfig(model);
+    // Fail closed before waiting on a busy, incompatible same-alias server.
+    const desired = desiredServerArgs(latestConfig, model.id);
+    const current = getManagedCurrent(latestConfig);
+    if (current?.alias === model.id) requireMatchingStartupArgs(current, desired, model.id);
+    cancelIdleShutdown();
+    const lockedStateDir = latestConfig.stateDir;
+    const release = await acquireServerLock(latestConfig, sessionCtx, model.id, "request", true, signal);
+    try {
+      signal?.throwIfAborted();
+      latestConfig = requestConfig(model, lockedStateDir);
+      // Revalidate/load under exclusive ownership on EVERY dispatch. A server
+      // may have stopped or switched between an overflow, summary and retry.
+      await ensureModelRunning(latestConfig, model.id, signal);
+      signal?.throwIfAborted();
+      latestConfig = requestConfig(model, lockedStateDir);
+      assertRequestServer(latestConfig, model.id);
+      cancelIdleShutdown();
+      return () => {
+        release?.();
+        if (!shuttingDown) scheduleIdleShutdown(latestConfig, model.id);
+      };
+    } catch (error) {
+      release?.();
+      throw error;
+    }
+  }));
 
-  let activeLoad: { id: string; promise: Promise<"started" | "already-running"> } | undefined;
-  let activeTurnRelease: ReleaseLock | undefined;
+  let sessionCtx: any;
+  let shuttingDown = false;
   let modelChangePoller: ReturnType<typeof setInterval> | undefined;
   let idleShutdownTimer: ReturnType<typeof setTimeout> | undefined;
   let lastSeenModelChangeEntryId: string | undefined;
@@ -573,34 +620,13 @@ export default async function localLlamaManager(pi: ExtensionAPI) {
     idleShutdownTimer.unref?.();
   }
 
-  async function loadLocalModel(config: Config, selectedId: string): Promise<"started" | "already-running"> {
-    if (activeLoad?.id === selectedId) {
-      await activeLoad.promise;
-      // A load started with an older config must not authorize new same-alias use.
-      return ensureModelRunning(config, selectedId);
-    }
-
-    const promise = ensureModelRunning(config, selectedId).finally(() => {
-      if (activeLoad?.id === selectedId) activeLoad = undefined;
-    });
-    activeLoad = { id: selectedId, promise };
-    return promise;
-  }
-
   async function stopLocalServerFromShortcut(ctx: any): Promise<void> {
     const latestConfig = loadConfig();
     cancelIdleShutdown();
 
     if (!ctx.isIdle?.()) {
-      ctx.ui.notify("Aborting current turn and stopping local llama.cpp server...", "info");
+      ctx.ui.notify("Aborting current turn; local server remains protected until the request settles...", "info");
       ctx.abort?.();
-
-      // If this pi instance owns the active turn lock, release it now so the
-      // stop shortcut does not wait on itself. Killing llama-server will also
-      // force any in-flight local request to end.
-      const releaseTurn = activeTurnRelease;
-      activeTurnRelease = undefined;
-      releaseTurn?.();
     }
 
     const release = await acquireServerLock(latestConfig, ctx, "stop", "loading", false);
@@ -625,8 +651,6 @@ export default async function localLlamaManager(pi: ExtensionAPI) {
     selectedProvider: string | undefined,
     selectedId: string | undefined,
     ctx: any,
-    mode: "select" | "queued" | "silent" = "select",
-    lockMode: "none" | "try" | "held" = "none",
   ) {
     const latestConfig = loadConfig();
     if (!selectedProvider || !selectedId) return;
@@ -655,28 +679,22 @@ export default async function localLlamaManager(pi: ExtensionAPI) {
       const desired = desiredServerArgs(latestConfig, selectedId);
       const owned = getManagedCurrent(latestConfig);
       if (owned?.alias === selectedId) requireMatchingStartupArgs(owned, desired, selectedId);
-      if (lockMode === "try") {
-        release = await acquireServerLock(latestConfig, ctx, selectedId, "loading", false);
-        if (!release) {
-          const lock = readLock(latestConfig);
-          const current = getManagedCurrent(latestConfig);
-          const detail = lock ? describeLock(lock) : "another pi instance";
-          ctx.ui.setStatus("local-llm", `selected ${selectedId}; server busy (${detail})`);
-          ctx.ui.notify(`Selected ${selectedId}, but llama.cpp is busy (${detail}). It will load/use this model on your next prompt instead of interrupting the other instance.`, "info");
-          if (current?.alias === selectedId && hasMatchingStartupArgs(current, desired)) {
-            ctx.ui.setStatus("local-llm", `selected ${selectedId}; already loaded, busy (${detail})`);
-          }
-          return "busy";
+      release = await acquireServerLock(latestConfig, ctx, selectedId, "loading", false);
+      if (!release) {
+        const lock = readLock(latestConfig);
+        const current = getManagedCurrent(latestConfig);
+        const detail = lock ? describeLock(lock) : "another pi instance";
+        ctx.ui.setStatus("local-llm", `selected ${selectedId}; server busy (${detail})`);
+        ctx.ui.notify(`Selected ${selectedId}, but llama.cpp is busy (${detail}). It will load/use this model on your next prompt instead of interrupting the other instance.`, "info");
+        if (current?.alias === selectedId && hasMatchingStartupArgs(current, desired)) {
+          ctx.ui.setStatus("local-llm", `selected ${selectedId}; already loaded, busy (${detail})`);
         }
+        return "busy";
       }
 
-      if (mode === "queued") {
-        ctx.ui.setStatus("local-llm", `message queued; checking ${selectedId}`);
-      } else if (mode === "select") {
-        ctx.ui.setStatus("local-llm", `loading/checking ${selectedId}`);
-      }
+      ctx.ui.setStatus("local-llm", `loading/checking ${selectedId}`);
 
-      const result = await loadLocalModel(latestConfig, selectedId);
+      const result = await ensureModelRunning(latestConfig, selectedId);
       const summary = await runtimeSummary(latestConfig, selectedId);
       ctx.ui.setStatus("local-llm", result === "started" ? `ready ${summary}` : `running ${summary}`);
       return result;
@@ -685,11 +703,13 @@ export default async function localLlamaManager(pi: ExtensionAPI) {
       ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
       throw error;
     } finally {
-      if (lockMode !== "held") release?.();
+      release?.();
     }
   }
 
   pi.on("session_start", async (_event, ctx) => {
+    sessionCtx = ctx;
+    shuttingDown = false;
     lastSeenModelChangeEntryId = latestModelChangeEntry(ctx)?.id;
     if (modelChangePoller) clearInterval(modelChangePoller);
     modelChangePoller = setInterval(() => {
@@ -718,7 +738,7 @@ export default async function localLlamaManager(pi: ExtensionAPI) {
       // re-selecting a stopped local model eagerly load it in the background
       // while preserving the startup behavior of not auto-loading restored local
       // models.
-      void prepareSelectedModel(entry.provider, entry.modelId, ctx, "select", "try").catch(() => {});
+      void prepareSelectedModel(entry.provider, entry.modelId, ctx).catch(() => {});
     }, 1000);
     modelChangePoller.unref?.();
 
@@ -756,44 +776,16 @@ export default async function localLlamaManager(pi: ExtensionAPI) {
     // llama.cpp finishes loading. If another pi instance is currently using the
     // server, do not queue an eager model switch; the next prompt will wait and
     // load/use the selected model safely.
-    void prepareSelectedModel(event.model.provider, event.model.id, ctx, "select", "try").catch(() => {});
+    void prepareSelectedModel(event.model.provider, event.model.id, ctx).catch(() => {});
   });
 
-  // Print/JSON mode may start directly with --model without emitting model_select
-  // before the first request. Also handles the user submitting a prompt while
-  // the selected local model is stopped, loading, or busy in another pi window:
-  // the message waits on a cross-process lock instead of restarting the server.
-  pi.on("before_agent_start", async (_event, ctx) => {
-    const active = (ctx as any).model;
-    const latestConfig = loadConfig();
-    if (active?.provider !== latestConfig.provider || !active?.id) return;
-
-    const desired = desiredServerArgs(latestConfig, active.id);
-    const current = getManagedCurrent(latestConfig);
-    if (current?.alias === active.id) requireMatchingStartupArgs(current, desired, active.id);
-    const release = await acquireServerLock(latestConfig, ctx, active.id, "turn", true);
-    activeTurnRelease = release;
-    try {
-      await prepareSelectedModel(active.provider, active.id, ctx, "queued", "held");
-    } catch (error) {
-      activeTurnRelease?.();
-      activeTurnRelease = undefined;
-      throw error;
-    }
-  });
-
-  pi.on("agent_end", async (_event, ctx) => {
-    const release = activeTurnRelease;
-    activeTurnRelease = undefined;
-    release?.();
-
+  pi.on("agent_settled", async (_event, ctx) => {
     const active = (ctx as any).model;
     const latestConfig = loadConfig();
     if (active?.provider === latestConfig.provider && active?.id) {
       const current = getManagedCurrent(latestConfig);
       if (current?.alias === active.id && hasMatchingStartupArgs(current, desiredServerArgs(latestConfig, active.id))) {
         ctx.ui.setStatus("local-llm", `running ${await runtimeSummary(latestConfig, active.id)}`);
-        scheduleIdleShutdown(latestConfig, active.id);
       } else {
         ctx.ui.setStatus("local-llm", `not ready ${active.id}; check configuration or /local-llm restart ${active.id}`);
       }
@@ -807,9 +799,9 @@ export default async function localLlamaManager(pi: ExtensionAPI) {
     }
     lastSeenModelChangeEntryId = undefined;
 
-    const release = activeTurnRelease;
-    activeTurnRelease = undefined;
-    release?.();
+    shuttingDown = true;
+    sessionCtx = undefined;
+    // Never release dispatched inference from a lifecycle hook.
     cancelIdleShutdown();
 
     const latestConfig = loadConfig();

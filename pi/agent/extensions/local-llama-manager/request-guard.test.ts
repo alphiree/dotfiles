@@ -11,12 +11,13 @@ import { test } from "node:test";
 import { buildServerArgs } from "../local-llama-manager.ts";
 import { inspectLinuxProcess, ownsProcessGroup } from "./process-identity.ts";
 
-async function runPi(dir: string, extension: string) {
+async function runPi(dir: string, extension: string, driver?: string, prompts = ["Say hello"]) {
   const env = { ...process.env, PI_CODING_AGENT_DIR: dir, PI_CODING_AGENT_SESSION_DIR: join(dir, "sessions"), PI_OFFLINE: "1", PI_TELEMETRY: "0" };
   for (const key of Object.keys(env)) if (key.startsWith("PI_SUBAGENT_")) delete env[key];
   const child = spawn(process.env.PI_TEST_CLI ?? "pi", [
     "--no-extensions", "--no-skills", "--no-context-files", "--no-tools", "--no-session", "--no-approve",
-    "-e", extension, "--model", "reuse-test/model", "--thinking", "off", "--mode", "json", "Say hello",
+    "-e", extension, ...(driver ? ["-e", driver] : []),
+    "--model", "reuse-test/model", "--thinking", "off", "--mode", "json", ...prompts,
   ], { cwd: dir, env, stdio: ["ignore", "pipe", "pipe"] });
   let output = "";
   child.stdout.on("data", chunk => { output += chunk; });
@@ -30,26 +31,41 @@ async function runPi(dir: string, extension: string) {
   }
 }
 
-test("Pi runtime suppresses inference after swallowed startup errors; matching config still requests", { skip: process.platform !== "linux", timeout: 90000 }, async t => {
+test("Pi runtime suppresses incompatible inference; matching config still requests", { skip: process.platform !== "linux", timeout: 90000 }, async t => {
   const dir = mkdtempSync(join(tmpdir(), "pi-reuse-runtime-"));
   const stateDir = join(dir, "state");
   mkdirSync(stateDir);
   const requests = join(dir, "requests.jsonl");
   writeFileSync(requests, "");
+  const modePath = join(dir, "mode.json");
+  writeFileSync(modePath, JSON.stringify({ mode: "normal" }));
   const serverScript = join(dir, "fake-server.mjs");
   writeFileSync(serverScript, `
     import { createServer } from 'node:http';
-    import { appendFileSync } from 'node:fs';
+    import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
     const server = createServer((req, res) => {
-      appendFileSync(${JSON.stringify(requests)}, JSON.stringify({ method: req.method, url: req.url }) + '\\n');
+      let lock;
+      try { lock = JSON.parse(readFileSync(${JSON.stringify(join(stateDir, "server-use.lock"))}, 'utf8')); } catch {}
+      appendFileSync(${JSON.stringify(requests)}, JSON.stringify({ method: req.method, url: req.url, lock }) + '\\n');
       if (req.url === '/v1/models') {
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ data: [{ id: 'model' }] }));
       } else {
         req.resume();
+        const state = JSON.parse(readFileSync(${JSON.stringify(modePath)}, 'utf8'));
+        const first = !state.used;
+        state.used = true;
+        state.count = (state.count ?? 0) + 1;
+        writeFileSync(${JSON.stringify(modePath)}, JSON.stringify(state));
+        if (state.mode === 'overflow' && state.count === 2) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: { message: 'context_length_exceeded: fake overflow', type: 'invalid_request_error' } }));
+          return;
+        }
         res.setHeader('Content-Type', 'text/event-stream');
         const chunk = { id: 'fake', object: 'chat.completion.chunk', created: 1, model: 'model', choices: [{ index: 0, delta: { role: 'assistant', content: 'hello' }, finish_reason: null }] };
         res.write('data: ' + JSON.stringify(chunk) + '\\n\\n');
+        if (state.mode === 'threshold' && first) chunk.usage = { prompt_tokens: 63000, completion_tokens: 1, total_tokens: 63001 };
         chunk.choices = [{ index: 0, delta: {}, finish_reason: 'stop' }];
         res.end('data: ' + JSON.stringify(chunk) + '\\n\\ndata: [DONE]\\n\\n');
       }
@@ -122,12 +138,71 @@ test("Pi runtime suppresses inference after swallowed startup errors; matching c
     writeFileSync(requests, "");
   });
 
+  // Real installed Pi routes prove that summary callers use this registered
+  // provider, not a built-in serializer bypass. Short idle safety is exercised
+  // with a deterministic clock in lifecycle.test.ts rather than sleeping here.
+  const driver = join(dir, "lifecycle-driver.ts");
+  writeFileSync(driver, `
+    export default function (pi) {
+      for (const name of ['agent_end', 'session_before_compact', 'session_compact']) {
+        pi.on(name, (event) => console.log('LIFECYCLE:' + name + ':' + (event.reason ?? '')));
+      }
+      pi.registerCommand('lifecycle-probe', {
+        handler: async (_args, ctx) => {
+          await ctx.waitForIdle();
+          await new Promise((resolve, reject) => ctx.compact({ onComplete: resolve, onError: reject }));
+          const response = await ctx.modelRegistry.complete(ctx.model, {
+            messages: [{ role: 'user', content: 'Summarize the conversation', timestamp: Date.now() }],
+          }, {});
+          if (response.stopReason !== 'stop') throw new Error(response.errorMessage ?? 'summary failed');
+          console.log('LIFECYCLE:direct-summary:success');
+          const target = ctx.sessionManager.getEntries().find(entry => entry.type === 'message' && entry.message.role === 'user');
+          const result = await ctx.navigateTree(target.id, { summarize: true });
+          if (result.cancelled) throw new Error('branch summary cancelled');
+          console.log('LIFECYCLE:branch-summary:success');
+        }
+      });
+    }
+  `);
+  for (const mode of ["normal", "threshold", "overflow"]) {
+    await t.test(`real Pi ${mode === "normal" ? "manual compaction and direct summary" : mode + " automatic compaction"} retains request ownership`, async () => {
+      publish(buildServerArgs(config, "model", config.models.model));
+      writeFileSync(requests, "");
+      writeFileSync(modePath, JSON.stringify({ mode }));
+      writeFileSync(join(dir, "settings.json"), JSON.stringify({ retry: { enabled: false },
+        compaction: { enabled: mode !== "normal", reserveTokens: 1024, keepRecentTokens: 0 }, cacheWarming: "off" }));
+      const prompts = mode === "normal" ? ["Say hello", "/lifecycle-probe"] : mode === "overflow" ? ["Say hello", "Continue"] : ["Say hello"];
+      const result = await runPi(dir, extension, driver, prompts);
+      assert.equal(result.code, 0, result.output);
+      assert.match(result.output, new RegExp('LIFECYCLE:session_compact:' + (mode === 'normal' ? 'manual' : mode)));
+      assert.ok(result.output.indexOf('LIFECYCLE:agent_end:') < result.output.indexOf('LIFECYCLE:session_before_compact:'), result.output);
+      if (mode === "normal") {
+        assert.match(result.output, /LIFECYCLE:direct-summary:success/);
+        assert.match(result.output, /LIFECYCLE:branch-summary:success/);
+      }
+      const posts = accesses().filter(request => request.method === "POST");
+      assert.ok(posts.length >= (mode === "threshold" ? 2 : 4), result.output);
+      assert.ok(posts.every(request => request.lock?.phase === "request"), JSON.stringify(posts));
+      assert.ok(!existsSync(join(stateDir, "server-use.lock")));
+      if (mode === "overflow") {
+        // The overflow, summary and successful retry all dispatched with ownership.
+        assert.match(result.output, /context_length_exceeded/);
+        assert.match(result.output, /LIFECYCLE:session_compact:overflow[\s\S]*"type":"agent_start"/);
+        const completed = result.output.split("\n").filter(line => line.startsWith("{"))
+          .map(line => JSON.parse(line)).filter(event => event.type === "message_end" && event.message.role === "assistant");
+        assert.equal(completed.at(-1)?.message.stopReason, "stop", result.output);
+      }
+    });
+  }
+  writeFileSync(requests, "");
+  writeFileSync(join(dir, "settings.json"), JSON.stringify({ retry: { enabled: false }, compaction: { enabled: false }, cacheWarming: "off" }));
+
   await t.test("external same alias fails closed and is never stopped", async () => {
     unlinkSync(join(stateDir, "server.pid"));
     unlinkSync(join(stateDir, "current.json"));
     const result = await runPi(dir, extension);
     assert.match(result.output, /"stopReason":"error"/);
-    assert.match(result.output, /No verified extension-owned/);
+    assert.match(result.output, /not started by this extension/);
     assert.ok(accesses().some(request => request.url === "/v1/models"));
     assert.ok(!accesses().some(request => request.method === "POST"));
     assert.ok(!existsSync(join(stateDir, "server-use.lock")));
