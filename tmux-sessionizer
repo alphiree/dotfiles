@@ -3,32 +3,61 @@
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-    selected=$(find \
-                ~/Desktop \
-                ~/Desktop/projects \
-                ~/Desktop/work \
-                ~/Desktop/personal \
-                ~/Desktop/playground \
-                ~/.config \
-                ~/dotfiles \
-                ~/ \
-                -mindepth 1 -maxdepth 1 -type d | fzf)
+    # Search category roots directly; skip any optional locations that are absent.
+    search_roots=(
+        "$HOME/Desktop"
+        "$HOME/Desktop/projects"
+        "$HOME/Desktop/projects/data-engineering"
+        "$HOME/Desktop/projects/tools"
+        "$HOME/Desktop/projects/apps"
+        "$HOME/Desktop/projects/labs"
+        "$HOME/Desktop/projects/external"
+        "$HOME/Desktop/personal"
+        "$HOME/Desktop/personal/interviews"
+        "$HOME/.config"
+        "$HOME/dotfiles"
+        "$HOME"
+    )
+    existing_roots=()
+    for root in "${search_roots[@]}"; do
+        [[ -d "$root" ]] && existing_roots+=("$root")
+    done
+    selected=$(find "${existing_roots[@]}" \
+        -mindepth 1 -maxdepth 1 -type d | sort -u | fzf)
 fi
 
 if [[ -z $selected ]]; then
     exit 0
 fi
 
-selected_name=$(basename "$selected" | tr . _)
-tmux_running=$(pgrep tmux)
+if [[ ! -d "$selected" ]]; then
+    printf 'Directory does not exist: %s\n' "$selected" >&2
+    exit 1
+fi
+selected=$(realpath -- "$selected") || exit 1
+selected_name=$(basename "$selected" | tr '.:' '__')
 
-if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
-    tmux -u new-session -s $selected_name -c $selected
-    exit 0
+# Identical folder names must not attach to a different project's session.
+if tmux -u has-session -t "=$selected_name" 2>/dev/null; then
+    session_path=$(tmux -u display-message -p -t "=$selected_name" '#{session_path}') || exit 1
+    if [[ $(realpath -m -- "$session_path") != "$selected" ]]; then
+        path_hash=$(printf '%s' "$selected" | sha256sum)
+        selected_name="${selected_name}-${path_hash:0:12}"
+    fi
 fi
 
-if ! tmux -u has-session -t=$selected_name 2> /dev/null; then
-    tmux -u new-session -ds $selected_name -c $selected
+if tmux -u has-session -t "=$selected_name" 2>/dev/null; then
+    session_path=$(tmux -u display-message -p -t "=$selected_name" '#{session_path}') || exit 1
+    if [[ $(realpath -m -- "$session_path") != "$selected" ]]; then
+        printf 'Session name collision for: %s\n' "$selected" >&2
+        exit 1
+    fi
+else
+    tmux -u new-session -ds "$selected_name" -c "$selected" || exit 1
 fi
 
-tmux -u switch-client -t $selected_name
+if [[ -n ${TMUX:-} ]]; then
+    tmux -u switch-client -t "=$selected_name"
+else
+    tmux -u attach-session -t "=$selected_name"
+fi
