@@ -50,6 +50,14 @@ pi/agent/**/node_modules/
 pi/agent/extensions/voice-dictation/config.json
 # Local Git helper definition
 pi/agent/agents/git-helper.md
+
+# Codex warmer machine configuration, generated units, and retained legacy units
+codex-warmer/config.local.json
+codex-warmer/generated/
+codex-warmer/__pycache__/
+codex-warmer/tests/__pycache__/
+codex-warmer/codex-warmer.service
+codex-warmer/codex-warmer.timer
 # Run artifacts created in the repository root
 /pi-subagents/
 pi/agent/*.log

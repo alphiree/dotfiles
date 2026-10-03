@@ -77,3 +77,4 @@ GNU Stow was considered, but is intentionally deferred. The current layout alrea
 - If setup scripts detect an existing config target, they backup by default.
 - The old `kitty/` config is retained for reference; new default linking uses `ghostty/`.
 - Phone dictation workflow notes live in `phonegpt/README.md`; tmux keeps only generic paste helpers under `tmux/scripts/`.
+- Optional Linux Codex warmer: [`codex-warmer/README.md`](codex-warmer/README.md) (local config, generated units, and explicit activation).
