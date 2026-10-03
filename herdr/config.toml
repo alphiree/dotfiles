@@ -1,0 +1,151 @@
+# Herdr configuration
+# Docs: https://herdr.dev/docs/configuration/
+# Defaults: herdr --default-config
+
+onboarding = false
+
+[terminal]
+# New panes/tabs/workspaces inherit the source pane or workspace cwd.
+new_cwd = "follow"
+# macOS uses login shells automatically; Linux keeps non-login shell behavior.
+shell_mode = "auto"
+
+[theme]
+name = "vesper"
+
+auto_switch = false
+[ui]
+mouse_capture = true
+copy_on_select = true
+pane_borders = true
+pane_gaps = true
+show_agent_labels_on_pane_borders = true
+hide_tab_bar_when_single_tab = false
+# Create tabs immediately instead of opening the tab-name prompt.
+prompt_new_tab_name = false
+
+agent_panel_sort = "spaces"
+[ui.toast]
+# Show in-app notices when background agents finish or need input.
+delivery = "herdr"
+delay_seconds = 1
+
+[ui.sound]
+# Keep agent notifications visual-only for now.
+enabled = false
+
+[session]
+# Let supported agents resume their native conversations after a Herdr server restart.
+resume_agents_on_restore = true
+
+[experimental]
+# Render inline images sent through the Kitty graphics protocol in local panes.
+# Ghostty supports this protocol; Herdr keeps it opt-in while experimental.
+kitty_graphics = true
+# Keep disabled initially because saved pane output may contain secrets/tokens.
+pane_history = false
+
+[keys]
+prefix = "ctrl+b"
+
+# Core tmux-like defaults, made explicit for readability.
+help = "prefix+?"
+# Herdr does not expose a theme-only key; settings opens the theme/settings UI.
+settings = ["prefix+shift+s", "prefix+t"]
+# Herdr default is prefix+q; keep it and add tmux-style prefix+d.
+detach = ["prefix+q", "prefix+d"]
+reload_config = "prefix+shift+r"
+
+# Workspaces are project containers. Tabs are layouts within a workspace.
+workspace_picker = "prefix+w"
+# Match tmux prefix+s session/window picker muscle memory with Herdr's broader
+# session navigator, which is closer than the workspace-only picker.
+goto = ["prefix+g", "prefix+s"]
+new_workspace = "prefix+shift+n"
+rename_workspace = "prefix+shift+w"
+close_workspace = "prefix+shift+d"
+toggle_sidebar = "prefix+b"
+
+# Navigate-mode workspace movement. This only applies inside Herdr's workspace /
+# goto navigation UI, so plain j/k does not affect shell or Neovim input.
+navigate_workspace_down = ["down", "j"]
+navigate_workspace_up = ["up", "k"]
+
+# Tabs roughly map to tmux windows.
+# prefix+c is handled by a custom command below so new tabs are inserted after
+# the current tab, tmux-style, instead of always being appended.
+new_tab = ""
+previous_tab = ["prefix+p", "shift+left"]
+next_tab = ["prefix+n", "shift+right"]
+switch_tab = "prefix+1..9"
+# Match tmux's default rename-window binding (prefix+,).
+rename_tab = "prefix+comma"
+close_tab = "prefix+shift+x"
+
+# Agent cycling: use Shift+Up/Down to move between detected agent panes.
+previous_agent = "shift+up"
+next_agent = "shift+down"
+
+# Vim-style pane focus is Herdr's default.
+# Ctrl+h/j/k/l is handled below by custom shell commands so Neovim can receive
+# those keys first and only cross into Herdr panes at split edges.
+focus_pane_left = "prefix+h"
+focus_pane_down = "prefix+j"
+focus_pane_up = "prefix+k"
+focus_pane_right = "prefix+l"
+
+# Resize is prefix+r, then h/j/k/l in Herdr's resize mode.
+resize_mode = "prefix+r"
+
+# Keep Herdr split defaults and add tmux split muscle-memory aliases.
+split_vertical = ["prefix+v", "prefix+%"]
+split_horizontal = ["prefix+minus", "prefix+\""]
+
+copy_mode = "prefix+["
+close_pane = "prefix+x"
+zoom = "prefix+z"
+
+# Tmux-like new-window behavior: create immediately, focus it, and move it next
+# to the current tab/window instead of appending at the far right.
+[[keys.command]]
+key = "prefix+c"
+type = "shell"
+command = "~/.config/herdr/scripts/new-tab-after-current.sh"
+description = "new tab after current"
+
+# Seamless no-prefix navigation, similar to vim-tmux-navigator.
+# The helper forwards Ctrl+h/j/k/l into Neovim panes and focuses Herdr panes
+# directly everywhere else. Neovim crosses back into Herdr at split edges.
+[[keys.command]]
+key = "ctrl+h"
+type = "shell"
+command = "~/.config/herdr/scripts/navigate-vim-herdr.sh left ctrl+h"
+description = "navigate left (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+j"
+type = "shell"
+command = "~/.config/herdr/scripts/navigate-vim-herdr.sh down ctrl+j"
+description = "navigate down (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+k"
+type = "shell"
+command = "~/.config/herdr/scripts/navigate-vim-herdr.sh up ctrl+k"
+description = "navigate up (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+l"
+type = "shell"
+command = "~/.config/herdr/scripts/navigate-vim-herdr.sh right ctrl+l"
+description = "navigate right (vim/herdr)"
+
+# Herdr equivalent of tmux-sessionizer. Opens fzf in a popup, then focuses or
+# creates a workspace for the selected directory.
+[[keys.command]]
+key = "prefix+f"
+type = "popup"
+command = "~/.config/herdr/scripts/herdr-sessionizer.sh"
+description = "sessionizer: open project workspace"
+width = "80%"
+height = "80%"

@@ -19,6 +19,12 @@ zsh/plugins/
 lazygit/state.yml
 nvim/lua/core/local.lua
 
+# Herdr runtime state
+herdr/*.log
+herdr/*.sock
+herdr/session.json
+herdr/release-notes.json
+
 # Local/vendor scratch repos
 opencode/.git_repos/
 
