@@ -1,0 +1,8 @@
+{
+  "name": "pi-youtube-transcript",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "youtube-transcript-plus": "^2.0.0"
+  }
+}

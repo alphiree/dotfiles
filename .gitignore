@@ -32,10 +32,24 @@ opencode/.git_repos/
 pi/agent/auth.json
 pi/agent/trust.json
 pi/agent/local-llms.json
+# Machine-specific Pi settings and subagent model routing
+pi/agent/settings.json
+pi/agent/pi-subagents-profiles.json
+pi/agent/models-store.json
+pi/agent/howaboua-pi-stuff-changelog.json
 pi/agent/sessions/
 pi/agent/npm/
 pi/agent/git/
 pi/agent/local-llms/
+pi/agent/backups/
+pi/agent/disabled-extensions/
+pi/agent/tmp/
+pi/agent/lan-voice/
+pi/agent/**/node_modules/
+# Local Git helper definition
+pi/agent/agents/git-helper.md
+# Run artifacts created in the repository root
+/pi-subagents/
 pi/agent/*.log
 pi/agent/**/*.log
 pi/agent/*.lock

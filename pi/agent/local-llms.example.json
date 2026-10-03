@@ -1,0 +1,32 @@
+{
+  "provider": "llama-cpp-local",
+  "baseUrl": "http://127.0.0.1:8080/v1",
+  "port": 8080,
+  "llamaServer": "~/llama.cpp/build/bin/llama-server",
+  "stateDir": "local-llms",
+  "stopWhenLeavingLocalProvider": false,
+  "startupTimeoutMs": 180000,
+  "shutdownTimeoutMs": 15000,
+  "idleShutdownMs": 0,
+  "commonArgs": [],
+  "models": {
+    "example-model": {
+      "name": "Example Local Model",
+      "path": "~/models/example-model.gguf",
+      "contextWindow": 32768,
+      "maxTokens": 8192,
+      "args": [
+        "--n-gpu-layers",
+        "99",
+        "--ctx-size",
+        "32768",
+        "--threads",
+        "8",
+        "--batch-size",
+        "2048",
+        "--flash-attn",
+        "on"
+      ]
+    }
+  }
+}
