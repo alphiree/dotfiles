@@ -74,7 +74,8 @@
     },
     "sql-worksheet.nvim": {
       "rev": "5a7e0f480444bf5a6272cf7110f7b3efde810266",
-      "src": "https://github.com/alphiree/sql-worksheet.nvim"
+      "src": "https://github.com/alphiree/sql-worksheet.nvim",
+      "version": "'v0.8.0'"
     },
     "telescope.nvim": {
       "rev": "5255aa27c422de944791318024167ad5d40aad20",
