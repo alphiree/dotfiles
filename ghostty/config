@@ -64,6 +64,12 @@ palette = 15=#f7f1ff
 # Reload Ghostty config quickly.
 keybind = ctrl+shift+r=reload_config
 
+# Switch Herdr tabs even in copy/search mode, which consumes modified arrows.
+# Send Herdr's configured Ctrl+B prefix followed by p/n instead of arrow keys.
+# These shortcuts are Herdr-specific; keep in sync with herdr/config.toml.
+keybind = shift+arrow_left=text:\x02p
+keybind = shift+arrow_right=text:\x02n
+
 # Match kitty's Ctrl+Shift+Arrow escape sequences.
 # These override Ghostty's default tab navigation on Ctrl+Shift+Left/Right.
 keybind = ctrl+shift+arrow_left=text:\x1b[1;6D
