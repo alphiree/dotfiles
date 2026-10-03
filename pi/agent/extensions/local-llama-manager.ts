@@ -3,6 +3,11 @@ import { spawn, execFile } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync } from "node:fs";
 import { basename, isAbsolute, join } from "node:path";
 import { promisify } from "node:util";
+import {
+  executableIdentity, getVerifiedCurrent, inspectLinuxProcess, ownsProcessGroup,
+  sameExecutable, sameProcess, stopVerifiedServer,
+  type CurrentServerInfo, type ProcessIdentity,
+} from "./local-llama-manager/process-identity.ts";
 
 interface LocalModelConfig {
   name?: string;
@@ -25,14 +30,6 @@ interface Config {
   stopOnSessionShutdown?: boolean;
   commonArgs?: string[];
   models: Record<string, LocalModelConfig>;
-}
-
-interface CurrentServerInfo {
-  alias?: string;
-  model?: string;
-  pid?: number;
-  args?: string[];
-  startedAt?: string;
 }
 
 type ServerLockPhase = "loading" | "turn";
@@ -103,16 +100,6 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function readPid(config: Config): number | undefined {
-  try {
-    const raw = readFileSync(pidPath(config), "utf8").trim();
-    const pid = Number(raw);
-    return Number.isFinite(pid) && pid > 0 ? pid : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function processAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -122,19 +109,9 @@ function processAlive(pid: number): boolean {
   }
 }
 
-function readCurrent(config: Config): CurrentServerInfo | undefined {
-  try {
-    return JSON.parse(readFileSync(currentPath(config), "utf8")) as CurrentServerInfo;
-  } catch {
-    return undefined;
-  }
-}
-
 function getManagedCurrent(config: Config): CurrentServerInfo | undefined {
-  const current = readCurrent(config);
-  const pid = current?.pid ?? readPid(config);
-  if (!current?.alias || !pid || !processAlive(pid)) return undefined;
-  return { ...current, pid };
+  const current = getVerifiedCurrent(config.stateDir);
+  return current?.alias ? current : undefined;
 }
 
 function readLock(config: Config): ServerLockInfo | undefined {
@@ -305,13 +282,13 @@ function tailLog(config: Config, maxLines = 10): string {
   }
 }
 
-async function waitUntilServing(config: Config, alias: string, pid?: number) {
+async function waitUntilServing(config: Config, alias: string, identity: ProcessIdentity) {
   const timeout = config.startupTimeoutMs ?? 180000;
   const started = Date.now();
   let lastSeen: string | undefined;
 
   while (Date.now() - started < timeout) {
-    if (pid && !processAlive(pid)) {
+    if (!sameProcess(identity, inspectLinuxProcess(identity.pid))) {
       const logTail = tailLog(config);
       throw new Error(`llama-server exited before serving ${alias}. Log: ${logPath(config)}${logTail ? `\nRecent log tail:\n${logTail}` : ""}`);
     }
@@ -330,42 +307,11 @@ function idleShutdownDelay(config: Config): number | undefined {
 }
 
 async function stopManagedServer(config: Config): Promise<boolean> {
-  const pid = readPid(config);
-  if (!pid) return false;
-
-  if (!processAlive(pid)) {
-    try { unlinkSync(pidPath(config)); } catch {}
-    try { unlinkSync(currentPath(config)); } catch {}
-    return false;
-  }
-
-  const timeout = config.shutdownTimeoutMs ?? 15000;
-  const started = Date.now();
-
-  try {
-    // Spawned detached, so the negative pid targets the process group.
-    process.kill(-pid, "SIGTERM");
-  } catch {
-    try { process.kill(pid, "SIGTERM"); } catch {}
-  }
-
-  while (Date.now() - started < timeout) {
-    if (!processAlive(pid)) break;
-    await sleep(300);
-  }
-
-  if (processAlive(pid)) {
-    try { process.kill(-pid, "SIGKILL"); } catch {
-      try { process.kill(pid, "SIGKILL"); } catch {}
-    }
-  }
-
-  try { unlinkSync(pidPath(config)); } catch {}
-  try { unlinkSync(currentPath(config)); } catch {}
-  return true;
+  return stopVerifiedServer(config.stateDir, config.shutdownTimeoutMs ?? 15000);
 }
 
 async function startServer(config: Config, alias: string, model: LocalModelConfig) {
+  if (process.platform !== "linux") throw new Error("Managed llama-server requires Linux process identity verification.");
   if (!existsSync(config.llamaServer)) {
     throw new Error(`llama-server not found: ${config.llamaServer}`);
   }
@@ -373,6 +319,8 @@ async function startServer(config: Config, alias: string, model: LocalModelConfi
     throw new Error(`GGUF not found for ${alias}: ${model.path}`);
   }
 
+  // Resolve symlinks before opening resources or spawning.
+  const expectedExecutable = executableIdentity(config.llamaServer);
   ensureStateDir(config);
   closeSync(openSync(logPath(config), "a"));
   const logFd = openSync(logPath(config), "a");
@@ -387,17 +335,33 @@ async function startServer(config: Config, alias: string, model: LocalModelConfi
     ...configuredArgs,
   ];
 
-  const child = spawn(config.llamaServer, args, {
-    detached: true,
-    stdio: ["ignore", logFd, logFd],
-    env: process.env,
+  // Compare the actual /proc executable's device/inode as well as path,
+  // rather than recording a configured alias.
+  let child: ReturnType<typeof spawn>;
+  try {
+    child = spawn(expectedExecutable.path, args, {
+      detached: true,
+      stdio: ["ignore", logFd, logFd],
+      env: process.env,
+    });
+  } finally {
+    closeSync(logFd);
+  }
+  await new Promise<void>((resolve, reject) => {
+    child.once("spawn", resolve);
+    child.once("error", reject);
   });
-
   child.unref();
+  const identity = child.pid ? inspectLinuxProcess(child.pid) : undefined;
+  if (!identity || !ownsProcessGroup(identity) || !sameExecutable(expectedExecutable, identity.executable)) {
+    // Do not kill/adopt a PID whose identity could not be established. The
+    // server may need manual cleanup if proc access was denied after spawn.
+    throw new Error("Cannot verify spawned llama-server identity; not adopting or signaling it. Check the server manually.");
+  }
+  writeFileSync(currentPath(config), JSON.stringify({ alias, model: model.path, pid: child.pid, identity, args, startedAt: new Date().toISOString() }, null, 2));
   writeFileSync(pidPath(config), String(child.pid));
-  writeFileSync(currentPath(config), JSON.stringify({ alias, model: model.path, pid: child.pid, args, startedAt: new Date().toISOString() }, null, 2));
 
-  await waitUntilServing(config, alias, child.pid);
+  await waitUntilServing(config, alias, identity);
 }
 
 async function ensureModelRunning(config: Config, alias: string) {
@@ -412,10 +376,13 @@ async function ensureModelRunning(config: Config, alias: string) {
     return "already-running";
   }
 
+  // Migrate unverifiable/legacy state without signaling the unknown server,
+  // even when it already serves the requested alias.
+  if (!current) await stopManagedServer(config);
   const served = await getServedModel(config);
   if (served === alias) return "already-running";
 
-  if (served && served !== alias && !readPid(config)) {
+  if (served && served !== alias && !current) {
     throw new Error(
       `A llama.cpp server is already serving ${served} on ${config.baseUrl}, but it was not started by this extension. Stop it manually, then select ${alias} again.`
     );
@@ -759,9 +726,10 @@ export default function localLlamaManager(pi: ExtensionAPI) {
 
       if (!command || command === "status") {
         removeLockIfStale(latestConfig);
-        const pid = readPid(latestConfig);
-        const served = getManagedCurrent(latestConfig)?.alias ?? await getServedModel(latestConfig);
-        const owned = pid ? processAlive(pid) : false;
+        const current = getManagedCurrent(latestConfig);
+        const pid = current?.pid;
+        const served = current?.alias ?? await getServedModel(latestConfig);
+        const owned = !!current;
         const lock = readLock(latestConfig);
         const gpu = await getGpuMemorySummary();
         ctx.ui.notify(`local-llm status: served=${served ?? "none"}, ownedPid=${pid ?? "none"}, ownedAlive=${owned}, busy=${lock ? describeLock(lock) : "no"}${gpu ? `, ${gpu}` : ""}, log=${logPath(latestConfig)}`, "info");
