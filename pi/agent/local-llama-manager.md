@@ -16,11 +16,47 @@
 - The configured capabilities are advertised to Pi, and the projector is supplied once via `--mmproj`. Reload Pi after changing capabilities.
 - File validation is **not** tensor/architecture validation. Obtain the projector for the exact base model; llama.cpp checks actual compatibility on load. An arbitrary GGUF is not sufficient.
 
-Regression tests (Node 25, no install needed):
+## Same-alias startup changes and restart
+
+An alias is not proof that the running server matches the current configuration. For a **verified extension-owned** same-alias process, the manager compares the saved `current.json` startup argument array with the exact ordered result of `buildServerArgs`. Matching arguments retain the no-`/models`-network reuse path, including a busy server. Missing/malformed saved arguments fail closed.
+
+Changing the main-model path, adding/changing/removing the projector (including switching between text and image input), or changing common/model startup arguments requires an explicit restart. Selection and requests fail with:
+
+```text
+Restart required: /local-llm restart <alias>
+```
+
+The manager does **not** automatically stop/reload a same-alias server on a mismatch, even if it is busy. Idle timers and automatic session shutdown also leave a mismatched server alone; a rejected prompt exiting Pi must not stop it. After reviewing the new configuration, run `/local-llm restart <alias>`; it waits for the server-use lock, validates the desired arguments before shutdown, and restarts only verified owned processes. Reload Pi after capability changes so its registered model capabilities match the configuration, then resend the rejected prompt. Selecting a different alias retains the existing owned-server switch behavior, with argument validation before shutdown.
+
+**External/unverifiable servers:** both text-only and image-capable same-alias reuse are now rejected. This deliberately tightens the old text-only alias-based behavior too: `/models` cannot verify paths, projectors, or startup options. External same/different-alias processes are never stopped/adopted. Stop them manually, then select the local model or resend the prompt. `/local-llm restart <alias>` reports an error, not a successful restart, when a detected external server occupies the endpoint.
+
+Pi logs and continues after `before_agent_start` errors; throwing there alone does not cancel inference. A second check in this provider's stream entrypoint validates current owned identity and startup arguments before delegating to Pi's normal OpenAI Completions serializer. Rejections become assistant errors without an inference HTTP request (also on retries/tool continuations); this does not change other providers or Pi's global hook semantics. Status avoids calling stale/external same-alias configurations loaded/ready.
+
+Scope: comparison is exact startup arguments, not file hashes or GGUF tensor compatibility. Replacing model/projector contents in place without changing their paths is not detected; explicitly restart in that case. Saved state remains trusted same-user data. Existing PID/executable/group ownership checks and their documented race limitations are unchanged. No active configuration, profile, models store, model/projector assets, or original vision design is changed by this fix.
+
+Regression tests (Node 25; mocked tests need no install, `request-guard.test.ts` additionally needs Linux and the installed `pi` CLI, override with `PI_TEST_CLI`):
 
 ```sh
 node --test pi/agent/extensions/tests/local-llama-manager.test.mjs pi/agent/extensions/local-llama-manager/*.test.ts
 ```
+
+## Manual single-photo test outside Pi
+
+Stop any other local model first to avoid competing for GPU/RAM. For this machine, start the installed llama.cpp Web UI on a separate loopback port (8081 must be unused):
+
+```sh
+~/llama.cpp/build/bin/llama-server \
+  --model ~/Desktop/models/Qwen3.5-9B-Q4_K_M.gguf \
+  --mmproj ~/Desktop/models/qwen3.5-9b-mmproj-F16.gguf \
+  --host 127.0.0.1 --port 8081 --parallel 1 \
+  --ctx-size 8192 --n-gpu-layers 99 \
+  --batch-size 512 --ubatch-size 128 --flash-attn on \
+  --cache-type-k q4_0 --cache-type-v q4_0 --cache-ram 0 \
+  --image-max-tokens 1024 --jinja \
+  --chat-template-kwargs '{"enable_thinking":false}'
+```
+
+Wait for startup, open `http://127.0.0.1:8081`, attach one photo, and ask it to describe visible details or transcribe text without guessing. The Web UI is enabled by default in installed llama.cpp 9631. This 8K context is for a small standalone photo conversation, not the larger research-agent prompt; it does not change Pi's 32K settings. Stop this manually launched server with Ctrl+C in its terminal before using Pi's local model. It is external to the manager and is deliberately not adopted by it. These command flags were checked against the installed binary; no new real-photo acceptance run was performed for this bug fix.
 
 ## Verified Qwen3.5-9B setup (2026-10-03)
 

@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ProviderStreams } from "@earendil-works/pi-ai";
 import { spawn, execFile } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync, statSync, readSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
@@ -417,33 +418,66 @@ async function startServer(config: Config, alias: string, model: LocalModelConfi
   await waitUntilServing(config, alias, identity);
 }
 
-async function ensureModelRunning(config: Config, alias: string) {
+function desiredServerArgs(config: Config, alias: string): string[] {
   const model = config.models[alias];
   if (!model) throw new Error(`No local model config found for ${alias}`);
+  return buildServerArgs(config, alias, model);
+}
 
+export function hasMatchingStartupArgs(current: CurrentServerInfo, desired: string[]): boolean {
+  // State is trusted same-user data, but old/malformed records fail closed.
+  const saved = current.args;
+  return Array.isArray(saved) && saved.length === desired.length &&
+    desired.every((arg, index) => typeof saved[index] === "string" && saved[index] === arg);
+}
+
+function requireMatchingStartupArgs(current: CurrentServerInfo, desired: string[], alias: string) {
+  if (!hasMatchingStartupArgs(current, desired)) {
+    throw new Error(`Local llama.cpp startup configuration for ${alias} changed or cannot be verified. Restart required: /local-llm restart ${alias}. The running server was not stopped.`);
+  }
+}
+
+function externalServerError(config: Config, served: string, alias: string): Error {
+  return new Error(`A llama.cpp server is already serving ${served} on ${config.baseUrl}, but it was not started by this extension. Its startup configuration cannot be verified, even for the same alias. Stop it manually, then select ${alias} again; /local-llm restart ${alias} cannot restart an external server.`);
+}
+
+async function ensureModelRunning(config: Config, alias: string) {
+  // Validate/build before state cleanup, shutdown, or spawn, including switches.
+  const desired = desiredServerArgs(config, alias);
   const current = getManagedCurrent(config);
   if (current?.alias === alias) {
-    // Trust the extension-owned state first. When another pi process is using
-    // the server, /models may time out even though the requested model is
-    // already loaded. Avoid killing/restarting the same model in that case.
+    requireMatchingStartupArgs(current, desired, alias);
+    // Preserve the no-network fast path even while another Pi is using it.
     return "already-running";
   }
 
-  // Migrate unverifiable/legacy state without signaling the unknown server,
-  // even when it already serves the requested alias.
-  if (!current) await stopManagedServer(config);
   const served = await getServedModel(config);
-  if (served === alias) return "already-running";
-
-  if (served && served !== alias && !current) {
-    throw new Error(
-      `A llama.cpp server is already serving ${served} on ${config.baseUrl}, but it was not started by this extension. Stop it manually, then select ${alias} again.`
-    );
-  }
+  // /models reports aliases, not model/projector paths or startup options.
+  // Never treat it as evidence of compatible (text OR image) external state.
+  if (served && !current) throw externalServerError(config, served, alias);
 
   await stopManagedServer(config);
-  await startServer(config, alias, model);
+  await startServer(config, alias, config.models[alias]);
   return "started";
+}
+
+async function restartModel(config: Config, alias: string) {
+  desiredServerArgs(config, alias);
+  if (!getManagedCurrent(config)) {
+    const served = await getServedModel(config);
+    if (served) throw externalServerError(config, served, alias);
+  }
+  await stopManagedServer(config);
+  await ensureModelRunning(config, alias);
+}
+
+function assertRequestServer(config: Config, alias: string) {
+  const desired = desiredServerArgs(config, alias);
+  const current = getManagedCurrent(config);
+  if (current?.alias !== alias) {
+    throw new Error(`No verified extension-owned llama.cpp server is ready for ${alias}. Select the model again; stop any external server manually.`);
+  }
+  requireMatchingStartupArgs(current, desired, alias);
 }
 
 function latestModelChangeEntry(ctx: any): any {
@@ -452,12 +486,13 @@ function latestModelChangeEntry(ctx: any): any {
     .find((entry: any) => entry.type === "model_change");
 }
 
-export function registerLocalProvider(pi: ExtensionAPI, config: Config) {
+export function registerLocalProvider(pi: ExtensionAPI, config: Config, streamSimple?: ProviderStreams["streamSimple"]) {
   pi.registerProvider(config.provider, {
     name: "llama.cpp local",
     baseUrl: config.baseUrl,
     api: "openai-completions",
     apiKey: "local",
+    streamSimple,
     compat: {
       supportsDeveloperRole: false,
       supportsReasoningEffort: false,
@@ -474,11 +509,24 @@ export function registerLocalProvider(pi: ExtensionAPI, config: Config) {
   });
 }
 
-export default function localLlamaManager(pi: ExtensionAPI) {
+export default async function localLlamaManager(pi: ExtensionAPI) {
   const config = loadConfig();
   ensureStateDir(config);
 
-  registerLocalProvider(pi, config);
+  // Hook errors (including before_agent_start) are logged and swallowed by Pi.
+  // Guard the actual provider stream too: synchronous setup failure becomes an
+  // assistant error, never a request. This also covers retries/tool continuations.
+  // Load Pi's standard serializer only when instantiating the extension.
+  const { openAICompletionsApi } = await import("@earendil-works/pi-ai/compat");
+  const completions = openAICompletionsApi();
+  registerLocalProvider(pi, config, (model, context, options) => {
+    const latestConfig = loadConfig();
+    if (model.baseUrl !== latestConfig.baseUrl || model.provider !== latestConfig.provider) {
+      throw new Error("Local llama.cpp provider endpoint changed. Reload Pi before sending a request.");
+    }
+    assertRequestServer(latestConfig, model.id);
+    return completions.streamSimple(model, context, options);
+  });
 
   let activeLoad: { id: string; promise: Promise<"started" | "already-running"> } | undefined;
   let activeTurnRelease: ReleaseLock | undefined;
@@ -504,7 +552,7 @@ export default function localLlamaManager(pi: ExtensionAPI) {
         if (!idleShutdownDelay(latestConfig)) return;
 
         const current = getManagedCurrent(latestConfig);
-        if (current?.alias !== alias) return;
+        if (current?.alias !== alias || !hasMatchingStartupArgs(current, desiredServerArgs(latestConfig, alias))) return;
 
         const release = await acquireServerLock(latestConfig, undefined, alias, "loading", false);
         if (!release) {
@@ -514,7 +562,7 @@ export default function localLlamaManager(pi: ExtensionAPI) {
 
         try {
           const latestCurrent = getManagedCurrent(latestConfig);
-          if (latestCurrent?.alias === alias) {
+          if (latestCurrent?.alias === alias && hasMatchingStartupArgs(latestCurrent, desiredServerArgs(latestConfig, alias))) {
             await stopManagedServer(latestConfig);
           }
         } finally {
@@ -526,7 +574,11 @@ export default function localLlamaManager(pi: ExtensionAPI) {
   }
 
   async function loadLocalModel(config: Config, selectedId: string): Promise<"started" | "already-running"> {
-    if (activeLoad?.id === selectedId) return activeLoad.promise;
+    if (activeLoad?.id === selectedId) {
+      await activeLoad.promise;
+      // A load started with an older config must not authorize new same-alias use.
+      return ensureModelRunning(config, selectedId);
+    }
 
     const promise = ensureModelRunning(config, selectedId).finally(() => {
       if (activeLoad?.id === selectedId) activeLoad = undefined;
@@ -600,6 +652,9 @@ export default function localLlamaManager(pi: ExtensionAPI) {
 
     let release: ReleaseLock | undefined;
     try {
+      const desired = desiredServerArgs(latestConfig, selectedId);
+      const owned = getManagedCurrent(latestConfig);
+      if (owned?.alias === selectedId) requireMatchingStartupArgs(owned, desired, selectedId);
       if (lockMode === "try") {
         release = await acquireServerLock(latestConfig, ctx, selectedId, "loading", false);
         if (!release) {
@@ -608,7 +663,7 @@ export default function localLlamaManager(pi: ExtensionAPI) {
           const detail = lock ? describeLock(lock) : "another pi instance";
           ctx.ui.setStatus("local-llm", `selected ${selectedId}; server busy (${detail})`);
           ctx.ui.notify(`Selected ${selectedId}, but llama.cpp is busy (${detail}). It will load/use this model on your next prompt instead of interrupting the other instance.`, "info");
-          if (current?.alias === selectedId) {
+          if (current?.alias === selectedId && hasMatchingStartupArgs(current, desired)) {
             ctx.ui.setStatus("local-llm", `selected ${selectedId}; already loaded, busy (${detail})`);
           }
           return "busy";
@@ -676,13 +731,16 @@ export default function localLlamaManager(pi: ExtensionAPI) {
     const lock = readLock(latestConfig);
 
     if (current?.alias === active.id) {
-      ctx.ui.setStatus("local-llm", `selected ${active.id}; loaded${lock ? `, busy (${describeLock(lock)})` : ", idle"}`);
+      const matches = hasMatchingStartupArgs(current, desiredServerArgs(latestConfig, active.id));
+      ctx.ui.setStatus("local-llm", matches
+        ? `selected ${active.id}; loaded${lock ? `, busy (${describeLock(lock)})` : ", idle"}`
+        : `selected ${active.id}; restart required: /local-llm restart ${active.id}`);
     } else if (current?.alias) {
       ctx.ui.setStatus("local-llm", `selected ${active.id}; port ${latestConfig.port} currently serves ${current.alias}${lock ? `, busy (${describeLock(lock)})` : ""}`);
     } else {
       const served = await getServedModel(latestConfig);
       if (served === active.id) {
-        ctx.ui.setStatus("local-llm", `selected ${active.id}; loaded${lock ? `, busy (${describeLock(lock)})` : ", idle"}`);
+        ctx.ui.setStatus("local-llm", `selected ${active.id}; external server, configuration unverified; stop it manually`);
       } else if (served) {
         ctx.ui.setStatus("local-llm", `selected ${active.id}; port ${latestConfig.port} currently serves ${served}`);
       } else {
@@ -710,6 +768,9 @@ export default function localLlamaManager(pi: ExtensionAPI) {
     const latestConfig = loadConfig();
     if (active?.provider !== latestConfig.provider || !active?.id) return;
 
+    const desired = desiredServerArgs(latestConfig, active.id);
+    const current = getManagedCurrent(latestConfig);
+    if (current?.alias === active.id) requireMatchingStartupArgs(current, desired, active.id);
     const release = await acquireServerLock(latestConfig, ctx, active.id, "turn", true);
     activeTurnRelease = release;
     try {
@@ -729,8 +790,13 @@ export default function localLlamaManager(pi: ExtensionAPI) {
     const active = (ctx as any).model;
     const latestConfig = loadConfig();
     if (active?.provider === latestConfig.provider && active?.id) {
-      ctx.ui.setStatus("local-llm", `running ${await runtimeSummary(latestConfig, active.id)}`);
-      scheduleIdleShutdown(latestConfig, active.id);
+      const current = getManagedCurrent(latestConfig);
+      if (current?.alias === active.id && hasMatchingStartupArgs(current, desiredServerArgs(latestConfig, active.id))) {
+        ctx.ui.setStatus("local-llm", `running ${await runtimeSummary(latestConfig, active.id)}`);
+        scheduleIdleShutdown(latestConfig, active.id);
+      } else {
+        ctx.ui.setStatus("local-llm", `not ready ${active.id}; check configuration or /local-llm restart ${active.id}`);
+      }
     }
   });
 
@@ -753,12 +819,16 @@ export default function localLlamaManager(pi: ExtensionAPI) {
     if (active?.provider && active.provider !== latestConfig.provider) return;
 
     const current = getManagedCurrent(latestConfig);
-    if (!current?.alias) return;
+    // A rejected prompt/old session must not stop the stale server on exit.
+    if (!current?.alias || !hasMatchingStartupArgs(current, desiredServerArgs(latestConfig, current.alias))) return;
 
     const stopRelease = await acquireServerLock(latestConfig, ctx, current.alias, "loading", false);
     if (!stopRelease) return;
     try {
-      await stopManagedServer(latestConfig);
+      const latestCurrent = getManagedCurrent(latestConfig);
+      if (latestCurrent?.alias === current.alias && hasMatchingStartupArgs(latestCurrent, desiredServerArgs(latestConfig, current.alias))) {
+        await stopManagedServer(latestConfig);
+      }
     } finally {
       stopRelease();
     }
@@ -811,8 +881,7 @@ export default function localLlamaManager(pi: ExtensionAPI) {
         }
         const release = await acquireServerLock(latestConfig, ctx, target, "loading", true);
         try {
-          await stopManagedServer(latestConfig);
-          await ensureModelRunning(latestConfig, target);
+          await restartModel(latestConfig, target);
           ctx.ui.notify(`Restarted local model: ${target}`, "info");
         } finally {
           release?.();

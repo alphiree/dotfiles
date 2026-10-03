@@ -1,7 +1,9 @@
 // Tests the real manager function bodies with a fully mocked OS/network.
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { stripTypeScriptTypes } from "node:module";
 import { test } from "node:test";
 import { createContext, runInContext } from "node:vm";
@@ -10,10 +12,13 @@ import { buildServerArgs } from "../local-llama-manager.ts";
 
 const source = readFileSync(new URL("../local-llama-manager.ts", import.meta.url), "utf8");
 function body(start: string, end: string) {
-  return stripTypeScriptTypes(source.slice(source.indexOf(start), source.indexOf(end)));
+  return stripTypeScriptTypes(source.slice(source.indexOf(start), source.indexOf(end))).replaceAll("export ", "");
 }
-const startBody = body("async function startServer(", "async function ensureModelRunning(");
-const ensureBody = body("async function ensureModelRunning(", "function latestModelChangeEntry(");
+const startBody = body("async function startServer(", "function desiredServerArgs(");
+const ensureBody = body("function desiredServerArgs(", "function latestModelChangeEntry(");
+const factoryBody = stripTypeScriptTypes(source.slice(source.indexOf("export default async function localLlamaManager(")))
+  .replace("export default ", "")
+  .replace('await import("@earendil-works/pi-ai/compat")', "mockAi");
 const identity: ProcessIdentity = {
   version: 1, pid: 4242, bootId: "12345678-1234-1234-1234-123456789abc",
   startTime: "123", uid: 1000, processGroup: 4242, session: 4242,
@@ -82,39 +87,225 @@ test("exec/spawn failure is surfaced without publishing a PID", async () => {
   assert.equal(f.writes.size, 0);
 });
 
-test("legacy/reused state cannot authorize replacing an external served model", async () => {
-  let discarded = 0;
+function reuseFixture(current: any, served?: string) {
+  const calls: string[] = [];
   const context = createContext({
-    getManagedCurrent: () => undefined,
-    stopManagedServer: async () => { discarded++; return false; },
-    getServedModel: async () => "external-model",
-    startServer: () => assert.fail("must not spawn over an unknown live server"),
+    buildServerArgs,
+    getManagedCurrent: () => current,
+    stopManagedServer: async () => { calls.push("stop"); current = undefined; return true; },
+    getServedModel: async () => { calls.push("network"); return served; },
+    startServer: async () => { calls.push("start"); },
   });
   runInContext(ensureBody, context);
-  await assert.rejects(context.ensureModelRunning(config, "model"), /not started by this extension/);
-  assert.equal(discarded, 1);
+  return { context, calls };
+}
+function owned(args: any = buildServerArgs(config, "model", config.models.model), alias = "model") {
+  return { alias, pid: 4242, identity, args };
+}
+
+for (const alias of ["model", "external-model"]) {
+  for (const operation of ["ensureModelRunning", "restartModel"]) {
+    test(`${operation} rejects external ${alias} without stopping or starting it`, async () => {
+      const f = reuseFixture(undefined, alias);
+      await assert.rejects(f.context[operation](config, "model"), /not started by this extension/);
+      assert.deepEqual(f.calls, ["network"]);
+    });
+  }
+}
+
+test("verified same config preserves fast path without any network or stop", async () => {
+  const f = reuseFixture(owned(), "model");
+  assert.equal(await f.context.ensureModelRunning(config, "model"), "already-running");
+  f.context.assertRequestServer(config, "model");
+  assert.deepEqual(f.calls, []);
 });
 
-test("legacy state is discarded even when external server already serves requested alias", async () => {
-  let discarded = 0;
-  const context = createContext({
-    getManagedCurrent: () => undefined,
-    stopManagedServer: async () => { discarded++; return false; },
-    getServedModel: async () => "model",
-    startServer: () => assert.fail("must not start or stop external server"),
+for (const saved of [undefined, null, "--model", {}, [], [1], [null]]) {
+  test(`missing/malformed saved args (${JSON.stringify(saved)}) require restart, with no /models bypass`, async () => {
+    const f = reuseFixture({ ...owned(), args: saved }, "model");
+    await assert.rejects(f.context.ensureModelRunning(config, "model"), /Restart required: \/local-llm restart model/);
+    assert.throws(() => f.context.assertRequestServer(config, "model"), /Restart required/);
+    assert.deepEqual(f.calls, []);
   });
-  runInContext(ensureBody, context);
-  assert.equal(await context.ensureModelRunning(config, "model"), "already-running");
-  assert.equal(discarded, 1);
+}
+
+test("non-string saved argument cannot compare as compatible", async () => {
+  const args: any[] = buildServerArgs(config, "model", config.models.model);
+  args[1] = { toString: () => "/mock-model" };
+  const f = reuseFixture(owned(args));
+  await assert.rejects(f.context.ensureModelRunning(config, "model"), /Restart required/);
+  assert.deepEqual(f.calls, []);
 });
 
-test("verified same model preserves fast path without any network or stop", async () => {
-  const context = createContext({
-    getManagedCurrent: () => ({ alias: "model", pid: 4242, identity }),
-    stopManagedServer: () => assert.fail("must not stop"),
-    getServedModel: () => assert.fail("must not require network"),
-    startServer: () => assert.fail("must not start"),
+test("same-alias changes all require explicit restart without network or shutdown", async t => {
+  const dir = mkdtempSync(join(tmpdir(), "reuse-projector-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const projector = join(dir, "projector.gguf");
+  const otherProjector = join(dir, "other.gguf");
+  writeFileSync(projector, "GGUFfixture");
+  writeFileSync(otherProjector, "GGUFfixture");
+  const text = config.models.model;
+  const vision = { ...text, input: ["text", "image"] as ("text" | "image")[], mmproj: projector };
+  const changes = [
+    ["text to vision", config, vision],
+    ["projector changed", { ...config, models: { model: vision } }, { ...vision, mmproj: otherProjector }],
+    ["projector and vision removed", { ...config, models: { model: vision } }, text],
+    ["main model path", config, { ...text, path: "/different-model" }],
+    ["model args", config, { ...text, args: ["--ctx-size", "8192"] }],
+    ["common args removed", { ...config, commonArgs: ["--jinja"] }, text],
+    ["model args removed", { ...config, models: { model: { ...text, args: ["--jinja"] } } }, text],
+  ] as const;
+  for (const [name, previous, model] of changes) {
+    await t.test(name, async () => {
+      const f = reuseFixture(owned(buildServerArgs(previous, "model", previous.models.model)), "model");
+      const desired = { ...config, models: { model } };
+      await assert.rejects(f.context.ensureModelRunning(desired, "model"), /Restart required/);
+      assert.throws(() => f.context.assertRequestServer(desired, "model"), /Restart required/);
+      assert.deepEqual(f.calls, []);
+    });
+  }
+});
+
+for (const operation of ["ensureModelRunning", "restartModel"]) {
+  test(`${operation} validates invalid vision/unknown alias before network or stop`, async () => {
+    const f = reuseFixture(owned(undefined, "old-model"));
+    const invalid = { ...config, models: { model: { path: "/mock-model", input: ["text", "image"] } } };
+    await assert.rejects(f.context[operation](invalid, "model"), /requires an mmproj path/);
+    await assert.rejects(f.context[operation](config, "missing"), /No local model config/);
+    assert.deepEqual(f.calls, []);
   });
-  runInContext(ensureBody, context);
-  assert.equal(await context.ensureModelRunning(config, "model"), "already-running");
+}
+
+test("explicit restart stops verified stale same-alias server and starts requested config", async () => {
+  const f = reuseFixture(owned(["old-config"]));
+  await f.context.restartModel(config, "model");
+  assert.deepEqual(f.calls, ["stop", "network", "stop", "start"]);
+});
+
+test("different-alias owned switch cannot reuse /models alias-only fallback", async () => {
+  const f = reuseFixture(owned(undefined, "old-model"), "model");
+  assert.equal(await f.context.ensureModelRunning(config, "model"), "started");
+  assert.deepEqual(f.calls, ["network", "stop", "start"]);
+});
+
+async function factoryFixture(current: any, busy = false) {
+  const f = reuseFixture(current);
+  let latest: any = { ...config, provider: "local", baseUrl: "http://localhost:8080/v1" };
+  let stream: any;
+  const handlers = new Map<string, any>();
+  const commands = new Map<string, any>();
+  const statuses: string[] = [];
+  const notifications: string[] = [];
+  let lockAttempts = 0;
+  const ctx = {
+    model: { provider: "local", id: "model" },
+    ui: { setStatus: (_key: string, text: string) => statuses.push(text), notify: (text: string) => notifications.push(text) },
+    sessionManager: { getBranch: () => [] },
+  };
+  Object.assign(f.context, {
+    mockAi: { openAICompletionsApi: () => ({ streamSimple: () => { f.calls.push("request"); return "stream"; } }) },
+    loadConfig: () => latest, ensureStateDir: () => {},
+    registerLocalProvider: (_pi: unknown, _config: unknown, delegate: any) => { stream = delegate; },
+    acquireServerLock: async () => { lockAttempts++; return busy ? undefined : () => f.calls.push("release"); },
+    readLock: () => ({ phase: "turn", model: "model", pid: 42 }),
+    describeLock: () => "other instance", logPath: () => "/mock-log",
+    latestModelChangeEntry: () => undefined, runtimeSummary: async () => "model=model",
+    removeLockIfStale: () => {}, setInterval: () => ({ unref() {} }), clearInterval: () => {},
+    STOP_SHORTCUT: "ctrl+shift+x",
+  });
+  runInContext(factoryBody, f.context);
+  await f.context.localLlamaManager({
+    on: (name: string, handler: any) => handlers.set(name, handler),
+    registerShortcut: () => {}, registerCommand: (name: string, command: any) => commands.set(name, command.handler),
+  });
+  return { ...f, ctx, handlers, commands, statuses, notifications, stream: () => stream({ ...ctx.model, baseUrl: latest.baseUrl }, {}, {}),
+    setConfig: (value: any) => { latest = value; }, lockAttempts: () => lockAttempts };
+}
+
+test("busy stale selection rejects before lock attempt and never reports loaded", async () => {
+  const f = await factoryFixture(owned(["old-config"]), true);
+  f.handlers.get("model_select")({ model: f.ctx.model }, f.ctx);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.lockAttempts(), 0);
+  assert.ok(f.notifications.some(text => text.includes("Restart required")));
+  assert.ok(!f.statuses.some(text => /loaded|ready|running/.test(text)));
+  assert.deepEqual(f.calls, []);
+  await f.handlers.get("session_start")({}, f.ctx);
+  assert.match(f.statuses.at(-1)!, /restart required/);
+});
+
+test("busy matching selection can report already loaded without any network/stop", async () => {
+  const f = await factoryFixture(owned(), true);
+  f.handlers.get("model_select")({ model: f.ctx.model }, f.ctx);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.lockAttempts(), 1);
+  assert.ok(f.statuses.some(text => text.includes("already loaded, busy")));
+  assert.deepEqual(f.calls, []);
+});
+
+test("stream guard independently rejects stale config and loadConfig failures before delegate", async () => {
+  const f = await factoryFixture(owned(["old-config"]));
+  assert.throws(f.stream, /Restart required/);
+  f.context.loadConfig = () => { throw new Error("Invalid mmproj"); };
+  assert.throws(f.stream, /Invalid mmproj/);
+  assert.deepEqual(f.calls, []);
+});
+
+test("restart command surfaces external refusal instead of reporting Restarted", async () => {
+  const f = await factoryFixture(undefined);
+  f.context.getServedModel = async () => "model";
+  await assert.rejects(f.commands.get("local-llm")("restart model", f.ctx), /cannot restart an external server/);
+  assert.ok(!f.notifications.some(text => text.includes("Restarted")));
+  assert.deepEqual(f.calls, ["release"]);
+});
+
+test("a pending same-alias load with old config cannot authorize a new config", async () => {
+  const f = await factoryFixture(undefined);
+  let current: any;
+  f.context.getManagedCurrent = () => current;
+  const realEnsure = f.context.ensureModelRunning;
+  let finishLoad!: () => void;
+  const pending = new Promise<void>(resolve => { finishLoad = resolve; });
+  let first = true;
+  f.context.ensureModelRunning = async (latest: any, alias: string) => {
+    if (!first) return realEnsure(latest, alias);
+    first = false;
+    await pending;
+    current = owned();
+    return "started";
+  };
+  f.handlers.get("model_select")({ model: f.ctx.model }, f.ctx);
+  await new Promise(resolve => setImmediate(resolve));
+  f.setConfig({ ...config, provider: "local", baseUrl: "http://localhost:8080/v1", commonArgs: ["--jinja"] });
+  const turn = f.handlers.get("before_agent_start")({}, f.ctx);
+  // Let the second caller enter loadLocalModel while the old load is pending.
+  await new Promise(resolve => setImmediate(resolve));
+  finishLoad();
+  await assert.rejects(turn, /Restart required/);
+  assert.throws(f.stream, /Restart required/);
+  assert.ok(!f.calls.includes("stop") && !f.calls.includes("request"));
+});
+
+test("previously scheduled idle shutdown leaves a now-stale server untouched", async () => {
+  const f = await factoryFixture(owned());
+  let timer!: () => void;
+  f.context.idleShutdownDelay = () => 1000;
+  f.context.setTimeout = (callback: () => void) => { timer = callback; return { unref() {} }; };
+  f.context.clearTimeout = () => {};
+  await f.handlers.get("agent_end")({}, f.ctx);
+  assert.equal(typeof timer, "function");
+  f.setConfig({ ...config, provider: "local", baseUrl: "http://localhost:8080/v1", commonArgs: ["--jinja"] });
+  timer();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.lockAttempts(), 0);
+  assert.deepEqual(f.calls, []);
+});
+
+test("startup failure releases turn lock; provider guard still rejects", async () => {
+  const f = await factoryFixture(undefined);
+  f.context.getServedModel = async () => "model";
+  await assert.rejects(f.handlers.get("before_agent_start")({}, f.ctx), /not started by this extension/);
+  assert.deepEqual(f.calls, ["release"]);
+  assert.throws(f.stream, /No verified extension-owned/);
+  assert.deepEqual(f.calls, ["release"]);
 });
