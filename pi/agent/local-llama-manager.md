@@ -1,0 +1,119 @@
+# Local llama.cpp image input
+
+`extensions/local-llama-manager.ts` keeps models text-only unless explicitly opted in:
+
+```json
+{
+  "path": "~/Desktop/models/Qwen3.5-9B-Q4_K_M.gguf",
+  "input": ["text", "image"],
+  "mmproj": "local-llms/assets/qwen3.5-9b-mmproj-F16.gguf"
+}
+```
+
+- `input` is optional (default `["text"]`). Only unique `text`/`image` capabilities including `text` are accepted.
+- `mmproj` is required for image input and rejected on text-only entries. It supports `~`, `$HOME`, `${HOME}` and paths relative to `PI_CODING_AGENT_DIR` (normally `~/.pi/agent`). Existing main-model path behavior is unchanged.
+- Before registering models or switching servers, the manager requires a readable regular projector file with the GGUF signature. Conflicting projector selection flags in model/common args are rejected for image-capable entries. Offload tuning such as `--no-mmproj-offload` is still allowed.
+- The configured capabilities are advertised to Pi, and the projector is supplied once via `--mmproj`. Reload Pi after changing capabilities.
+- File validation is **not** tensor/architecture validation. Obtain the projector for the exact base model; llama.cpp checks actual compatibility on load. An arbitrary GGUF is not sufficient.
+
+Regression tests (Node 25, no install needed):
+
+```sh
+node --test pi/agent/extensions/tests/local-llama-manager.test.mjs
+```
+
+## Verified Qwen3.5-9B setup (2026-10-03)
+
+No initiating-checkout configuration was activated. The prepared, ignored configuration files are in the topic worktree:
+
+- `pi/agent/local-llms.json`
+- `pi/agent/pi-subagents-profiles.json`
+- Backups: `pi/agent/local-llms/backups/local-llms.original.json` and `pi-subagents-profiles.original.json`
+- Asset: `pi/agent/local-llms/assets/qwen3.5-9b-mmproj-F16.gguf`
+- Isolated runtime/config/session/evidence directory: `pi/agent/local-llms/runtime/`
+
+Worktree root: `/home/alphire/dotfiles/.git/pi-subagents/worktrees/67592c91-176e-4435-a677-3721955eb6da`.
+
+### Provenance
+
+Existing main model `/home/alphire/Desktop/models/Qwen3.5-9B-Q4_K_M.gguf`:
+SHA-256 `03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8`, matching [Unsloth's published standard Q4_K_M](https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/blob/3885219b6810b007914f3a7950a8d1b469d598a5/Qwen3.5-9B-Q4_K_M.gguf).
+
+Projector: standard [Unsloth/Qwen3.5-9B-GGUF](https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/tree/3885219b6810b007914f3a7950a8d1b469d598a5), base `Qwen/Qwen3.5-9B`, not an uncensored variant.
+
+```sh
+curl -fL --max-time 300 -o pi/agent/local-llms/assets/qwen3.5-9b-mmproj-F16.gguf \
+  https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/3885219b6810b007914f3a7950a8d1b469d598a5/mmproj-F16.gguf
+sha256sum pi/agent/local-llms/assets/qwen3.5-9b-mmproj-F16.gguf
+```
+
+Downloaded SHA-256: `f70dc3509053962b0d0d3ee8a7eacebf5d60aa560cad78254ae8698516ae029f` (918,166,080 bytes), matching the published F16 projector. Successful live image inference validates the pair beyond file signatures.
+
+Installed binary `/home/alphire/llama.cpp/build/bin/llama-server --version`: `9631 (6e14286ed)`, GNU 15.2.1/Linux x86_64. Source HEAD `6e14286edaa60a223292c8a996506905b2f66f66`; runtime logs confirm CUDA/RTX 4060 Laptop GPU. Neither binary nor existing model assets were replaced.
+
+### Final target settings
+
+Only `qwen3.5-9b-q4-k-m` changed. Other model entries and global server policy are identical to the backup.
+
+- Context: **32768**, output maximum: **2048**.
+- One server slot; GPU layers 99 (full offload); projector GPU offload default.
+- Batch 512 / microbatch 128; threads 8 / batch threads 8.
+- Flash attention on; K/V caches `q4_0`; host prompt cache (`--cache-ram`) 0.
+- `--image-max-tokens 1024`; Jinja enabled; thinking disabled.
+- Removed `--mlock`, avoiding locking the model into constrained host RAM.
+
+8K was insufficient for actual research: a successful image read and `websearch` returned a subsequent 11,400-token prompt, rejected by the server. 32K supports the verified workflow and ordinary Pi compaction defaults; this was a settings correction, not a retry workaround.
+
+### Isolated live acceptance
+
+Runtime used `PI_CODING_AGENT_DIR=<worktree>/pi/agent/local-llms/runtime` and `PI_CODING_AGENT_SESSION_DIR=<runtime>/sessions`. Runtime-only server overrides: loopback port **18080**, separate `server/` state, absolute worktree projector path. It never reused the source's server state/port. Inherited `PI_SUBAGENT_*` lineage was removed to create an independent test root; existing terminal-host context was retained. No unrelated server was running or stopped.
+
+Loaded the existing `pi-websearch@0.7.1` extension and `/home/alphire/Desktop/projects/tools/pi-subagents/pi-extension/subagents/index.ts` read-only, plus the worktree manager. Existing researcher definition requires `websearch,webfetch`; optional `read` was enabled for the supplied image. `agent_browser` was absent/not needed. Automatic retries were disabled; successful final research used **enabled standard compaction**, without custom token settings.
+
+The isolated auth file is a private copy, not a symlink. `PI_CODING_AGENT_DIR=<runtime> PI_TELEMETRY=0 pi update --models` populated its catalog through Pi itself; no models-store file was manually edited. Source credentials/config were not updated.
+
+Commands and JSONL results are retained under `runtime/evidence/`:
+
+```sh
+python pi/agent/local-llms/runtime/evidence/image-test.py
+python pi/agent/local-llms/runtime/evidence/delegation-test.py
+```
+
+The image script launches:
+
+```sh
+pi --no-approve --no-skills --no-context-files --no-tools \
+  --model llama-cpp-local/qwen3.5-9b-q4-k-m --thinking off --mode json \
+  @<runtime>/evidence/shapes.png \
+  'Describe the two colored shapes and their left/right positions. Be brief.'
+```
+
+Final response: **“Red square: Left side; Blue circle: Right side”**, 644 input / 16 output tokens, `stop`, zero cost. Image fixture is 448×224 PNG, generated locally; no answer labels are embedded in it.
+
+The RPC parent ran `openai-codex/gpt-6.1-sol`, invoked `/profile codex-local-vision-researcher`, then called `subagent` for the **existing researcher**, with no model/thinking override. The durable launch manifest records profile `codex-local-vision-researcher`, model `llama-cpp-local/qwen3.5-9b-q4-k-m`, thinking `off`. Successful child run: `c7656709-224d-4593-b933-87a7140b246f`; child session `2026-10-03T06-58-15-965Z_3f449cd3-ae48-457b-b578-591a78ef78c6.jsonl`.
+
+Verified in the child session, not just the parent's summary:
+
+1. `read` returned the actual PNG as image content; Qwen described the correct shapes/positions.
+2. `websearch` executed with `numResults: 2`, returned official llama.cpp documentation, `isError: false`.
+3. `webfetch` executed on `https://raw.githubusercontent.com/ggml-org/llama.cpp/master/docs/multimodal.md`, returned actual documentation, `isError: false`.
+4. Child returned the correct `--mmproj` option and default projector GPU offload policy with the fetched link; parent joined its durable result.
+
+### Measured memory
+
+Sampled approximately once per second with `nvidia-smi` and `/proc/meminfo`; server RSS came from `/proc/<managed-pid>/status`. Values below are MiB. **Host used means MemTotal − MemAvailable**, not sum of process RSS. These are sampled maxima, not guaranteed instantaneous peaks; desktop/background usage is included.
+
+| Final experiment | GPU baseline / sampled max | Host used baseline / sampled max | Minimum available host | Max server RSS | Swap baseline / end |
+|---|---:|---:|---:|---:|---:|
+| Direct image, 34 samples | 644 / 7268 | 11446 / 12086 | 3078 | 3613 | 10739 / 12448 |
+| Profile researcher, 76 samples | 617 / 7308 | 10530 / 11805 | 3359 | 4039 | 11311 / 11229 |
+
+GPU total was 8188 MiB; host total 15164 MiB; swap total 23440 MiB. The initial 8K image test had only 1168 MiB minimum available host and increased whole-host swap use from 8778 to 11739 MiB. Host pressure is real; do not claim no swapping or reserve all nominal memory. Tests completed without OOM; extension-owned servers shut down afterward (`ps -C llama-server` empty).
+
+### Manual activation / limits
+
+After reviewing/integrating the tracked code, **separately** review the ignored JSON diffs and transfer only the target entry, added profile and verified projector into the user's active configuration. Do not replace current live files wholesale: they may have changed since the backups. Retain the relative projector layout, or update its path deliberately. `/reload` the manager and choose `/profile codex-local-vision-researcher` when desired.
+
+The hybrid profile copies `codex-only`, changing **only researcher** to local Qwen/off. All other roles/default runtime are unchanged; original `defaultProfile: codex-only` and all original profiles remain untouched. No new agent/framework was created.
+
+The verified smoke workload uses a small image and two research tools. Large/multiple images, longer research, concurrent agents, and an already-busy desktop can consume more memory or trigger compaction; the 1024 image-token cap trades detail for headroom. Keep one local model loaded and monitor memory. This is not an all-workloads capacity guarantee. Activation is intentionally left to the user; ignored configuration/assets/backups/runtime artifacts do not travel with the Git commit.

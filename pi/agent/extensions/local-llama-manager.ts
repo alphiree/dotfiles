@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { spawn, execFile } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, openSync, closeSync, statSync, readSync } from "node:fs";
 import { basename, isAbsolute, join } from "node:path";
 import { promisify } from "node:util";
 import {
@@ -12,6 +12,8 @@ import {
 interface LocalModelConfig {
   name?: string;
   path: string;
+  input?: ("text" | "image")[];
+  mmproj?: string;
   contextWindow?: number;
   maxTokens?: number;
   args?: string[];
@@ -66,14 +68,71 @@ function resolveConfigPath(path: string): string {
   return isAbsolute(expanded) ? expanded : join(CONFIG_DIR, expanded);
 }
 
-function loadConfig(): Config {
+export function loadConfig(): Config {
   const config = JSON.parse(readFileSync(CONFIG_PATH, "utf8")) as Config;
   config.llamaServer = expandPath(config.llamaServer);
   config.stateDir = resolveConfigPath(config.stateDir);
   for (const model of Object.values(config.models)) {
     model.path = expandPath(model.path);
   }
+  for (const [alias, model] of Object.entries(config.models)) {
+    validateModelVision(alias, model, config.commonArgs);
+  }
   return config;
+}
+
+// Validate before registration or stopping an existing server. GGUF architecture/
+// tensor compatibility is checked by llama.cpp when loading the projector.
+export function validateModelVision(alias: string, model: LocalModelConfig, commonArgs: string[] = []) {
+  if (model.input !== undefined && (
+    !Array.isArray(model.input) || !model.input.includes("text") ||
+    model.input.some((value) => value !== "text" && value !== "image") ||
+    new Set(model.input).size !== model.input.length
+  )) {
+    throw new Error(`Invalid input for ${alias}: expected ["text"] or ["text", "image"]`);
+  }
+  const vision = model.input?.includes("image") ?? false;
+  if (!vision && model.mmproj !== undefined) {
+    throw new Error(`mmproj for ${alias} requires image input`);
+  }
+  if (!vision) return;
+  if (typeof model.mmproj !== "string" || !model.mmproj.trim()) {
+    throw new Error(`Image input for ${alias} requires an mmproj path`);
+  }
+  const conflicting = [...commonArgs, ...(model.args ?? [])].find((arg) =>
+    /^(?:-mm|-mmu|--mmproj(?:-url|-auto)?|--no-mmproj(?:-auto)?)(?:=|$)/.test(arg));
+  if (conflicting) {
+    throw new Error(`Projector argument ${conflicting} for ${alias} conflicts with mmproj; use the model field`);
+  }
+  model.mmproj = resolveConfigPath(model.mmproj);
+  let fd: number | undefined;
+  try {
+    if (!statSync(model.mmproj).isFile()) throw new Error("not a regular file");
+    fd = openSync(model.mmproj, "r");
+    const magic = Buffer.alloc(4);
+    if (readSync(fd, magic, 0, 4, 0) !== 4 || magic.toString("ascii") !== "GGUF") {
+      throw new Error("not a GGUF file");
+    }
+  } catch (error) {
+    throw new Error(`Invalid mmproj for ${alias}: ${model.mmproj} (${error instanceof Error ? error.message : String(error)})`);
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+}
+
+export function buildServerArgs(config: Config, alias: string, model: LocalModelConfig): string[] {
+  validateModelVision(alias, model, config.commonArgs);
+  const configuredArgs = [...(config.commonArgs ?? []), ...(model.args ?? [])];
+  const hasPort = configuredArgs.includes("--port") || configuredArgs.includes("-p");
+  const hasHost = configuredArgs.includes("--host");
+  return [
+    "--model", model.path,
+    "--alias", alias,
+    ...(hasHost ? [] : ["--host", "127.0.0.1"]),
+    ...(hasPort ? [] : ["--port", String(config.port)]),
+    ...(model.mmproj ? ["--mmproj", model.mmproj] : []),
+    ...configuredArgs,
+  ];
 }
 
 function ensureStateDir(config: Config) {
@@ -319,21 +378,12 @@ async function startServer(config: Config, alias: string, model: LocalModelConfi
     throw new Error(`GGUF not found for ${alias}: ${model.path}`);
   }
 
+  const args = buildServerArgs(config, alias, model);
   // Resolve symlinks before opening resources or spawning.
   const expectedExecutable = executableIdentity(config.llamaServer);
   ensureStateDir(config);
   closeSync(openSync(logPath(config), "a"));
   const logFd = openSync(logPath(config), "a");
-  const configuredArgs = [...(config.commonArgs ?? []), ...(model.args ?? [])];
-  const hasPort = configuredArgs.includes("--port") || configuredArgs.includes("-p");
-  const hasHost = configuredArgs.includes("--host");
-  const args = [
-    "--model", model.path,
-    "--alias", alias,
-    ...(hasHost ? [] : ["--host", "127.0.0.1"]),
-    ...(hasPort ? [] : ["--port", String(config.port)]),
-    ...configuredArgs,
-  ];
 
   // Compare the actual /proc executable's device/inode as well as path,
   // rather than recording a configured alias.
@@ -399,7 +449,7 @@ function latestModelChangeEntry(ctx: any): any {
     .find((entry: any) => entry.type === "model_change");
 }
 
-function registerLocalProvider(pi: ExtensionAPI, config: Config) {
+export function registerLocalProvider(pi: ExtensionAPI, config: Config) {
   pi.registerProvider(config.provider, {
     name: "llama.cpp local",
     baseUrl: config.baseUrl,
@@ -413,7 +463,7 @@ function registerLocalProvider(pi: ExtensionAPI, config: Config) {
       id,
       name: model.name ?? id,
       reasoning: false,
-      input: ["text"],
+      input: model.input ?? ["text"],
       contextWindow: model.contextWindow ?? 64000,
       maxTokens: model.maxTokens ?? 16000,
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
