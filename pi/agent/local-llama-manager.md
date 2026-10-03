@@ -6,7 +6,7 @@
 {
   "path": "~/Desktop/models/Qwen3.5-9B-Q4_K_M.gguf",
   "input": ["text", "image"],
-  "mmproj": "local-llms/assets/qwen3.5-9b-mmproj-F16.gguf"
+  "mmproj": "~/Desktop/models/qwen3.5-9b-mmproj-F16.gguf"
 }
 ```
 
@@ -29,7 +29,7 @@ No initiating-checkout configuration was activated. The prepared, ignored config
 - `pi/agent/local-llms.json`
 - `pi/agent/pi-subagents-profiles.json`
 - Backups: `pi/agent/local-llms/backups/local-llms.original.json` and `pi-subagents-profiles.original.json`
-- Asset: `pi/agent/local-llms/assets/qwen3.5-9b-mmproj-F16.gguf`
+- Projector copied and SHA-256 verified at `~/Desktop/models/qwen3.5-9b-mmproj-F16.gguf`; both prepared and isolated runtime configs now use this path. Original download retained at `pi/agent/local-llms/assets/qwen3.5-9b-mmproj-F16.gguf` in the worktree.
 - Isolated runtime/config/session/evidence directory: `pi/agent/local-llms/runtime/`
 
 Worktree root: `/home/alphire/dotfiles/.git/pi-subagents/worktrees/67592c91-176e-4435-a677-3721955eb6da`.
@@ -112,8 +112,16 @@ GPU total was 8188 MiB; host total 15164 MiB; swap total 23440 MiB. The initial 
 
 ### Manual activation / limits
 
-After reviewing/integrating the tracked code, **separately** review the ignored JSON diffs and transfer only the target entry, added profile and verified projector into the user's active configuration. Do not replace current live files wholesale: they may have changed since the backups. Retain the relative projector layout, or update its path deliberately. `/reload` the manager and choose `/profile codex-local-vision-researcher` when desired.
+After reviewing/integrating the tracked code, **separately** review the ignored JSON diffs and transfer only the target entry, added profile and verified projector into the user's active configuration. Do not replace current live files wholesale: they may have changed since the backups. The projector is already copied to `~/Desktop/models/qwen3.5-9b-mmproj-F16.gguf`; retain that configured path. `/reload` the manager and choose `/profile codex-local-vision-researcher` when desired.
 
 The hybrid profile copies `codex-only`, changing **only researcher** to local Qwen/off. All other roles/default runtime are unchanged; original `defaultProfile: codex-only` and all original profiles remain untouched. No new agent/framework was created.
 
 The verified smoke workload uses a small image and two research tools. Large/multiple images, longer research, concurrent agents, and an already-busy desktop can consume more memory or trigger compaction; the 1024 image-token cap trades detail for headroom. Keep one local model loaded and monitor memory. This is not an all-workloads capacity guarantee. Activation is intentionally left to the user; ignored configuration/assets/backups/runtime artifacts do not travel with the Git commit.
+
+### Follow-up: models-directory placement and retest
+
+At the user's request, copied (not re-downloaded) the projector into `~/Desktop/models/` under the existing `alphire` account. Verified all 918,166,080 bytes against the SHA-256 above. Updated only the worktree's prepared and isolated runtime configurations; active/main configuration was unchanged.
+
+Re-ran `runtime/evidence/image-test.py` with the Desktop projector path using the installed llama.cpp 9631 binary, isolated loopback port 18080 and worktree server state. Exit 0; actual response: **“Left: Red square; Right: Blue circle”**, 652 input / 12 output tokens. Sampled GPU peak 7248 MiB; minimum host available 1959360 KiB (about 1913 MiB). No llama-server remained afterward. Previous direct-image evidence was preserved in `runtime/evidence/before-models-path-retest/`; latest `image-*` outputs describe this retest. Researcher delegation was not repeated in this follow-up.
+
+A read-only three-way file merge check against main at `7273313` found one conflict in `startServer`: main adds `expectedExecutable = executableIdentity(...)` where this branch adds `args = buildServerArgs(...)`. Integration must retain both security verification and vision argument validation, and rerun both sets of tests. No merge/rebase or main edits were performed.
