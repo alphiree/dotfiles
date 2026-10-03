@@ -44,23 +44,21 @@ if ! command -v herdr >/dev/null 2>&1; then
     exit 1
 fi
 
-workspace_id="$({ herdr workspace list || true; } | SELECTED_NAME="$selected_name" python3 - <<'PY'
+# Pass Python code as an argument so stdin remains the workspace JSON stream.
+# With pipefail, CLI or JSON parsing failures abort rather than create duplicates.
+workspace_id="$(herdr workspace list | SELECTED_NAME="$selected_name" python3 -c '
 import json
 import os
 import sys
 
 wanted = os.environ["SELECTED_NAME"]
-try:
-    data = json.load(sys.stdin)
-except Exception:
-    sys.exit(0)
+data = json.load(sys.stdin)
 
 for workspace in data.get("result", {}).get("workspaces", []):
     if workspace.get("label") == wanted:
         print(workspace.get("workspace_id", ""))
         break
-PY
-)"
+')"
 
 if [[ -n "$workspace_id" ]]; then
     herdr workspace focus "$workspace_id" >/dev/null
